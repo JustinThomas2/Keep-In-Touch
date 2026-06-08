@@ -7,12 +7,13 @@
   - [What does "first-class record" mean?](#what-does-first-class-record-mean)
   - [What are JPA entities?](#what-are-jpa-entities)
 - [Product Assumptions](#product-assumptions)
-  - [MVP assumptions](#mvp-assumptions)
-  - [Product positioning](#product-positioning)
-  - [MVP workflow](#mvp-workflow)
+  - [MVP Assumptions](#mvp-assumptions)
+  - [Product Positioning](#product-positioning)
+  - [MVP Workflow](#mvp-workflow)
 - [Naming Conventions](#naming-conventions)
-  - [Database naming](#database-naming)
-  - [Java naming](#java-naming)
+  - [Database Naming](#database-naming)
+  - [Java Naming](#java-naming)
+  - [GraphQL Naming](#graphql-naming)
 - [Type Conventions](#type-conventions)
 - [Entity Relationship Diagram](#entity-relationship-diagram)
 - [Table Descriptions](#table-descriptions)
@@ -27,105 +28,87 @@
   - [`InteractionType`](#interactiontype)
   - [`FollowUpStatus`](#followupstatus)
 - [Relationship Notes](#relationship-notes)
-  - [User ownership](#user-ownership)
-  - [Contacts and companies](#contacts-and-companies)
-  - [Contacts and interactions](#contacts-and-interactions)
-  - [Contacts and follow-ups](#contacts-and-follow-ups)
+  - [User Ownership](#user-ownership)
+  - [Contacts and Companies](#contacts-and-companies)
+  - [Contacts and Interactions](#contacts-and-interactions)
+  - [Contacts and Follow-Ups](#contacts-and-follow-ups)
+  - [Follow-Ups and Interactions](#follow-ups-and-interactions)
   - [Birthdays](#birthdays)
 - [Suggested Indexes](#suggested-indexes)
 - [Suggested Unique Indexes](#suggested-unique-indexes)
 - [MVP Query Patterns](#mvp-query-patterns)
-  - [Contact list](#contact-list)
-  - [Contact detail](#contact-detail)
-  - [Company list](#company-list)
-  - [Company detail](#company-detail)
+  - [Contact List](#contact-list)
+  - [Contact Detail](#contact-detail)
+  - [Company List](#company-list)
+  - [Company Detail](#company-detail)
   - [Dashboard](#dashboard)
-  - [Job-search workflow examples](#job-search-workflow-examples)
+  - [Job-Search Workflow Examples](#job-search-workflow-examples)
 - [First Vertical Slice: Companies and Contacts](#first-vertical-slice-companies-and-contacts)
 - [Second Vertical Slice: Interaction Logging](#second-vertical-slice-interaction-logging)
 - [Third Vertical Slice: Follow-Ups and Dashboard](#third-vertical-slice-follow-ups-and-dashboard)
 - [Fourth Vertical Slice: Birthdays](#fourth-vertical-slice-birthdays)
 - [Future Schema Ideas](#future-schema-ideas)
   - [Tags](#tags)
-  - [Custom personal dates](#custom-personal-dates)
-  - [Contact employment history](#contact-employment-history)
-  - [Opportunities or job applications](#opportunities-or-job-applications)
-  - [Recurring follow-ups](#recurring-follow-ups)
-  - [Interaction markdown](#interaction-markdown)
-  - [Interaction attachments](#interaction-attachments)
-  - [CSV import/export](#csv-importexport)
-  - [Reminders and notifications](#reminders-and-notifications)
-  - [Soft deletion](#soft-deletion)
+  - [Custom Personal Dates](#custom-personal-dates)
+  - [Contact Employment History](#contact-employment-history)
+  - [Opportunities or Job Applications](#opportunities-or-job-applications)
+  - [Recurring Follow-Ups](#recurring-follow-ups)
+  - [Interaction Markdown](#interaction-markdown)
+  - [Interaction Attachments](#interaction-attachments)
+  - [CSV Import/Export](#csv-importexport)
+  - [Reminders and Notifications](#reminders-and-notifications)
+  - [Soft Deletion](#soft-deletion)
 - [Open Schema Questions](#open-schema-questions)
 - [Current Product Decisions](#current-product-decisions)
 - [Initial Recommendation](#initial-recommendation)
 
 ## Project Summary
 
-This app is a personal CRM for keeping track of relationships, conversations, birthdays, companies, and follow-ups.
+Keep in Touch is a lightweight personal CRM for remembering people, conversations, and next steps.
 
-The goal is not to build a sales CRM. The goal is to build a lightweight relationship memory tool that helps a user answer:
+The goal is not to build a sales CRM. The goal is to build a relationship memory tool that helps a user answer:
 
 - Who do I know?
 - Where do they work?
 - How do I know them?
 - What have we talked about?
 - When should I follow up?
-- Whose birthday or important personal date should I remember?
 - Who am I accidentally letting go cold?
+- Whose birthday is coming up?
 
-The first version should be general enough to support normal personal relationship tracking, but job-search-friendly enough to support networking, alumni outreach, recruiter conversations, referrals, coffee chats, and target-company tracking.
+The first version should be general enough for personal relationship tracking, but job-search-friendly enough to support networking, alumni outreach, recruiter conversations, referrals, coffee chats, and target-company tracking.
 
 ## Key Concepts
 
-## What does "first-class record" mean?
+### What does "first-class record" mean?
 
-A first-class record is something important enough to get its own table, ID, lifecycle, and usually its own backend endpoints.
+A first-class record is important enough to have its own table, ID, lifecycle, and usually its own API operations.
 
-For example, a follow-up could be modeled as a simple field on a contact:
+For example, a follow-up should not only be a single date field on a contact.
+
+Instead of only:
 
 ```text
 contacts.next_follow_up_at
 ```
 
-That would only tell us the next follow-up date.
-
-Instead, in this app, follow-ups are first-class records:
+the app also has:
 
 ```text
 follow_ups
-- id
-- contact_id
-- interaction_id
-- due_at
-- status
-- reason
-- completed_at
-- created_at
-- updated_at
 ```
 
-That means the app can preserve follow-up history over time.
+That lets the app track follow-up history, complete follow-ups, cancel follow-ups, attach follow-ups to interactions, and show due follow-ups on a dashboard.
 
-A first-class follow-up can be created, edited, completed, cancelled, listed on a dashboard, and connected back to a contact or interaction.
+A cached field like `contacts.next_follow_up_at` is still useful for fast list/dashboard queries, but the source of truth is the `follow_ups` table.
 
-The same idea applies to future job applications. If job applications become first-class records, they would get their own table such as `job_applications`. If not, they might just be notes, tags, or interactions on a contact.
+### What are JPA entities?
 
-## What are JPA entities?
+JPA entities are Java classes that map to database tables.
 
-JPA stands for Java Persistence API. In a Spring Boot app, JPA entities are Java classes that map to database tables.
+The database stores rows in tables. The Spring Boot backend works with Java objects. JPA/Hibernate handles the mapping between those two worlds.
 
-For example, the database might have a table called `contacts`:
-
-```sql
-CREATE TABLE contacts (
-    id UUID PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255)
-);
-```
-
-The Spring Boot backend would have a Java entity class like:
+Example:
 
 ```java
 @Entity
@@ -135,50 +118,40 @@ public class Contact {
     private UUID id;
 
     private String firstName;
-
-    private String email;
 }
 ```
 
-The database stores rows. The Java app works with objects.
+This maps to a `contacts` table in Postgres.
 
-JPA/Hibernate handles the mapping between those two worlds.
+In this project:
 
-For this project:
-
-- Flyway creates and updates the database tables.
-- JPA entities represent those tables in Java.
-- Spring Data repositories help query and save those entities.
+- Flyway creates and updates the database schema.
+- JPA entities map Java objects to those database tables.
+- Spring Data repositories query and persist those entities.
 
 ## Product Assumptions
 
-### MVP assumptions
+### MVP Assumptions
 
 - The app is for a single user at first, but the schema should support multiple users later.
 - A `users` table will exist even if real authentication is not implemented in the first version.
 - Contacts belong to users.
 - Companies belong to users.
 - A contact may optionally be associated with one current company.
-- Companies are part of the MVP.
 - A contact can have many interactions.
-- Interactions can be edited after creation.
 - A contact can have many follow-ups over time.
-- A contact should only have one open follow-up at a time in MVP.
-- A follow-up always belongs to a contact.
-- A follow-up may optionally be attached to the interaction that created it.
-- Follow-ups require a specific due date and time.
-- Birthdays are part of the MVP.
-- Custom personal dates are not part of the MVP, but should be supported later.
-- Tags are not part of the MVP.
-- Email should be unique per user when provided.
-- Contacts do not need to have an email, phone number, or LinkedIn URL.
-- Companies are not required for contacts.
+- A contact should only have one open follow-up in MVP.
+- A follow-up belongs to a contact.
+- A follow-up may optionally be attached to an interaction.
+- Interactions should be editable after creation.
+- Birthdays are part of MVP.
+- Tags are not part of MVP.
 - `contacts.next_follow_up_at` and `contacts.last_interaction_at` are stored as shortcut fields for easier dashboard queries.
 - The source of truth for interaction history is the `interactions` table.
 - The source of truth for follow-up history is the `follow_ups` table.
-- The first version will not include email sync, calendar sync, LinkedIn scraping, AI-generated outreach, teams, billing, mobile apps, CSV import/export, tags, or markdown notes.
+- The first version will not include email sync, calendar sync, LinkedIn scraping, AI-generated outreach, teams, billing, real auth, tags, CSV import/export, or mobile apps.
 
-### Product positioning
+### Product Positioning
 
 The app should feel more like:
 
@@ -188,25 +161,27 @@ It should not feel like:
 
 > A sales pipeline tool for turning people into leads.
 
-### MVP workflow
+### MVP Workflow
 
 The first complete workflow should be:
 
 1. Create a company.
 2. View company details.
 3. Create a contact.
-4. Optionally associate that contact with a company.
+4. Optionally associate the contact with a company.
 5. View all contacts.
 6. Open a contact detail page.
-7. Add or view the contact's birthday.
-8. Log an interaction.
+7. Log an interaction.
+8. Edit an interaction.
 9. Add a follow-up.
 10. See due or overdue follow-ups on a dashboard.
 11. Mark a follow-up as complete.
+12. Add birthday info to a contact.
+13. See upcoming birthdays on a dashboard.
 
 ## Naming Conventions
 
-### Database naming
+### Database Naming
 
 - Table names use plural snake_case.
 - Column names use snake_case.
@@ -226,7 +201,7 @@ contact_id
 user_id
 ```
 
-### Java naming
+### Java Naming
 
 - Java classes use PascalCase.
 - Java fields use camelCase.
@@ -243,23 +218,46 @@ updatedAt
 ContactStatus.WAITING_FOR_RESPONSE
 ```
 
+### GraphQL Naming
+
+GraphQL fields should use camelCase.
+
+Database fields use snake_case, but GraphQL fields should expose frontend-friendly names.
+
+Examples:
+
+```text
+Database: first_name
+Java: firstName
+GraphQL: firstName
+```
+
+```text
+Database: next_follow_up_at
+Java: nextFollowUpAt
+GraphQL: nextFollowUpAt
+```
+
+GraphQL should be the primary app API for MVP.
+
+Avoid creating duplicate REST endpoints for MVP app data.
+
 ## Type Conventions
 
 This project uses Postgres for the database and Java/Spring Boot for the backend.
 
 Common type mappings:
 
-| Concept | Postgres Type | Java Type |
-|---|---|---|
-| ID | `UUID` | `UUID` |
-| Short text | `VARCHAR(n)` | `String` |
-| Long text / notes | `TEXT` | `String` |
-| Date + time | `TIMESTAMPTZ` | `OffsetDateTime` |
-| Date only | `DATE` | `LocalDate` |
-| Month/day values | `SMALLINT` | `Short` or `Integer` |
-| True/false | `BOOLEAN` | `Boolean` or `boolean` |
-| Status/type values | `VARCHAR(50)` | Java `enum` |
-| Count | `INTEGER` | `Integer` or `int` |
+| Concept | Postgres Type | Java Type | GraphQL Type |
+|---|---|---|---|
+| ID | `UUID` | `UUID` | `ID` |
+| Short text | `VARCHAR(n)` | `String` | `String` |
+| Long text / notes | `TEXT` | `String` | `String` |
+| Date + time | `TIMESTAMPTZ` | `OffsetDateTime` | custom scalar / `String` initially |
+| Date only | `DATE` | `LocalDate` | custom scalar / `String` initially |
+| True/false | `BOOLEAN` | `Boolean` or `boolean` | `Boolean` |
+| Status/type values | `VARCHAR(50)` | Java `enum` | GraphQL enum |
+| Count | `INTEGER` | `Integer` or `int` | `Int` |
 
 For MVP, status and type values will be stored as `VARCHAR(50)` in Postgres and represented as Java enums in the backend.
 
@@ -415,15 +413,12 @@ Examples:
 - `id` primary key
 - `user_id` references `users(id)`
 - `name` not null
-- Recommended unique company name per user: `(user_id, lower(name))`
 
 ### Notes
 
 Companies belong to users because two users may define and organize companies differently.
 
 In MVP, a contact can have one current company through `contacts.company_id`.
-
-Company management is part of the MVP. A user should be able to create a company, view company details, and see contacts associated with that company.
 
 Later, if we want employment history, we can add a `contact_companies` table.
 
@@ -454,9 +449,9 @@ This is the core table of the app.
 | `status` | `VARCHAR(50)` | yes | Current relationship/outreach status |
 | `source` | `VARCHAR(255)` | no | Where this contact came from |
 | `notes` | `TEXT` | no | General notes |
-| `birthday_month` | `SMALLINT` | no | Birthday month, 1 through 12 |
-| `birthday_day` | `SMALLINT` | no | Birthday day, 1 through 31 |
-| `birthday_year` | `INTEGER` | no | Optional birth year, if known |
+| `birthday_month` | `SMALLINT` | no | Birthday month, 1-12 |
+| `birthday_day` | `SMALLINT` | no | Birthday day, 1-31 |
+| `birthday_year` | `INTEGER` | no | Optional birth year |
 | `last_interaction_at` | `TIMESTAMPTZ` | no | Cached date of most recent interaction |
 | `next_follow_up_at` | `TIMESTAMPTZ` | no | Cached date of next open follow-up |
 | `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
@@ -468,23 +463,23 @@ This is the core table of the app.
 - `user_id` references `users(id)`
 - `company_id` references `companies(id)`
 - `first_name` not null
-- `last_name` nullable
 - `relationship_type` not null
 - `status` not null
-- Email unique per user when provided
-- Birthday month should be between 1 and 12 when provided
-- Birthday day should be between 1 and 31 when provided
-- Birthday month and birthday day should either both be present or both be null
+- `birthday_month` should be between 1 and 12 when present
+- `birthday_day` should be between 1 and 31 when present
+- If `birthday_day` is set, `birthday_month` should also be set
+- If `birthday_month` is set, `birthday_day` should also be set
+- Email should be unique per user when present
 
 ### Notes
 
-`last_name` is intentionally optional.
+`last_name` is not required.
 
-Contacts are not required to have an email, phone number, or LinkedIn URL.
+A contact does not require email, phone, or LinkedIn URL.
 
-`source` should be a free text field because it can represent many different things, such as LinkedIn, a conference, a friend introduction, Galvanize, a local meetup, a Slack community, or a job posting.
+A company is optional.
 
-Birthday is modeled as separate month/day/year fields instead of a single `DATE` because users often know someone's birthday month and day without knowing the year.
+`source` should be a free text field because sources can vary widely.
 
 `last_interaction_at` and `next_follow_up_at` are cached fields.
 
@@ -492,7 +487,7 @@ They can be recalculated from `interactions` and `follow_ups`, but storing them 
 
 When an interaction is created or updated, the backend should update `contacts.last_interaction_at`.
 
-When an open follow-up is created, completed, rescheduled, or cancelled, the backend should update `contacts.next_follow_up_at`.
+When an open follow-up is created, completed, snoozed, or cancelled, the backend should update `contacts.next_follow_up_at`.
 
 ---
 
@@ -545,7 +540,7 @@ This table answers:
 
 Interactions should be editable after creation.
 
-Markdown support for summaries would be nice, but it is not part of the MVP.
+Markdown support for summaries/outcomes is a stretch goal, not MVP.
 
 ---
 
@@ -553,7 +548,7 @@ Markdown support for summaries would be nice, but it is not part of the MVP.
 
 Stores reminders or next actions related to a contact.
 
-A contact can have many follow-ups over time, but only one open follow-up at a time in MVP.
+A contact can have many follow-ups over time, but MVP should enforce only one open follow-up per contact.
 
 Examples:
 
@@ -569,9 +564,9 @@ Examples:
 |---|---|---:|---|
 | `id` | `UUID` | yes | Primary key |
 | `contact_id` | `UUID` | yes | Related contact |
-| `interaction_id` | `UUID` | no | Optional interaction that created this follow-up |
-| `due_at` | `TIMESTAMPTZ` | yes | Exact date and time when follow-up is due |
-| `status` | `VARCHAR(50)` | yes | Open/completed/cancelled |
+| `interaction_id` | `UUID` | no | Optional related interaction |
+| `due_at` | `TIMESTAMPTZ` | yes | When follow-up is due |
+| `status` | `VARCHAR(50)` | yes | Open/completed/snoozed/cancelled |
 | `reason` | `TEXT` | no | Why this follow-up exists |
 | `completed_at` | `TIMESTAMPTZ` | no | When it was completed |
 | `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
@@ -584,7 +579,7 @@ Examples:
 - `interaction_id` references `interactions(id)`
 - `due_at` not null
 - `status` not null
-- Only one open follow-up per contact
+- MVP should enforce only one open follow-up per contact
 
 ### Notes
 
@@ -592,19 +587,13 @@ Follow-ups are separate records so the app can preserve history.
 
 The dashboard should primarily query this table for open, due, and overdue follow-ups.
 
-A follow-up always belongs to a contact.
-
-A follow-up may optionally be attached to an interaction. This supports workflows like:
-
-> I had a coffee chat with Sarah and created a follow-up from that conversation.
-
-For MVP, snoozing can be modeled as updating the `due_at` value on an open follow-up. A separate `SNOOZED` status is not needed yet.
-
 When a follow-up changes state, the backend should update `contacts.next_follow_up_at` based on the next open follow-up for that contact.
+
+A follow-up can be attached directly to a contact, and it may optionally be attached to the interaction that created the need for that follow-up.
 
 ## Enum Values
 
-These values should likely be represented as Java enums and stored in Postgres as `VARCHAR(50)`.
+These values should likely be represented as Java enums, GraphQL enums, and stored in Postgres as `VARCHAR(50)`.
 
 ## `ContactStatus`
 
@@ -622,6 +611,8 @@ DO_NOT_CONTACT
 ```
 
 ### Notes
+
+Possible meanings:
 
 | Value | Meaning |
 |---|---|
@@ -653,7 +644,7 @@ OTHER
 
 This should stay broad in MVP.
 
-More specific labels can eventually be handled through tags.
+More specific labels can be handled through future tags.
 
 ## `InteractionType`
 
@@ -677,18 +668,19 @@ Describes the state of a follow-up.
 ```text
 OPEN
 COMPLETED
+SNOOZED
 CANCELLED
 ```
 
 ### Notes
 
-For MVP, snoozing is not a separate status.
+For MVP, `SNOOZED` may simply mean the due date was changed.
 
-Snoozing means changing the `due_at` value while the follow-up remains `OPEN`.
+Later, if snooze history matters, we can add a separate follow-up events table.
 
 ## Relationship Notes
 
-## User ownership
+### User Ownership
 
 Most major records should belong to a user, either directly or indirectly.
 
@@ -706,15 +698,11 @@ Since interactions and follow-ups belong to contacts, and contacts belong to use
 
 If query performance or authorization checks become annoying later, we can consider adding `user_id` to those tables too.
 
-## Contacts and companies
+### Contacts and Companies
 
 A contact can have zero or one current company.
 
 This is intentionally simple.
-
-A company can have many contacts.
-
-Company management is part of MVP because job-search and networking workflows often revolve around companies.
 
 A more complete model could support employment history:
 
@@ -730,37 +718,61 @@ contact_companies
 
 That is not needed for MVP.
 
-## Contacts and interactions
+### Contacts and Interactions
 
 A contact can have many interactions.
 
 An interaction belongs to exactly one contact.
 
-Interactions should be editable.
+Interactions should not be deleted casually because they are part of relationship history.
+
+For MVP, interactions should be editable.
 
 If deletion is implemented, it should probably be a normal delete in MVP and soft delete later if needed.
 
-## Contacts and follow-ups
+### Contacts and Follow-Ups
 
 A contact can have many follow-ups over time.
 
 A follow-up belongs to exactly one contact.
 
-A follow-up can optionally belong to one interaction.
+For MVP, a contact should only have one open follow-up.
 
-In MVP, a contact should only have one open follow-up at a time.
+`contacts.next_follow_up_at` should represent the due date of the current open follow-up for that contact.
 
-`contacts.next_follow_up_at` should represent that open follow-up's due date.
+If future versions allow multiple open follow-ups, then `contacts.next_follow_up_at` should represent the earliest open follow-up.
 
-## Birthdays
+### Follow-Ups and Interactions
+
+A follow-up can optionally point to the interaction that created the need for the follow-up.
+
+Example:
+
+A user logs a coffee chat and writes:
+
+> Sarah said to check back next Friday after she talks to the hiring manager.
+
+The follow-up belongs to Sarah's contact record, but it can also reference that coffee chat interaction.
+
+This makes the follow-up easier to understand later.
+
+### Birthdays
 
 Birthdays are part of MVP.
 
-They are stored on contacts as separate month, day, and optional year fields.
+The schema stores birthday parts separately:
 
-This supports cases where the user knows someone's birthday but does not know the birth year.
+```text
+birthday_month
+birthday_day
+birthday_year
+```
 
-Future arbitrary personal dates should use a separate table, not more columns on contacts.
+This is intentional because a user may know someone's birthday month/day without knowing their birth year.
+
+Birthday year should be optional.
+
+Custom personal dates beyond birthdays are post-MVP.
 
 ## Suggested Indexes
 
@@ -809,31 +821,33 @@ CREATE INDEX idx_follow_ups_due_at
 
 ## Suggested Unique Indexes
 
-Email should be unique per user when provided.
+Email should be unique per user when present.
 
-In Postgres, nullable unique values need special care. Since contacts are not required to have an email, we can use a partial unique index:
+Postgres can support this with a partial unique index:
 
 ```sql
-CREATE UNIQUE INDEX uq_contacts_user_email_when_present
+CREATE UNIQUE INDEX uniq_contacts_user_email
     ON contacts(user_id, lower(email))
     WHERE email IS NOT NULL;
 ```
 
-This allows multiple contacts without email addresses, but prevents the same user from creating two contacts with the same email.
+This allows multiple contacts without email, but prevents duplicate emails for the same user.
 
-For one open follow-up per contact, we can use another partial unique index:
+For one open follow-up per contact in MVP, use a partial unique index:
 
 ```sql
-CREATE UNIQUE INDEX uq_follow_ups_one_open_per_contact
+CREATE UNIQUE INDEX uniq_open_follow_up_per_contact
     ON follow_ups(contact_id)
     WHERE status = 'OPEN';
 ```
+
+This allows many historical completed/cancelled follow-ups while preventing multiple open follow-ups.
 
 ## MVP Query Patterns
 
 The schema should support these early queries.
 
-## Contact list
+### Contact List
 
 Show all contacts for the current user.
 
@@ -844,9 +858,10 @@ Possible filters:
 - Search by name
 - Next follow-up due
 - Last interaction date
-- Birthday month
 
-## Contact detail
+Tags are intentionally excluded from MVP.
+
+### Contact Detail
 
 Show:
 
@@ -857,29 +872,27 @@ Show:
 - Open follow-up
 - Completed follow-ups
 
-## Company list
+### Company List
 
 Show all companies for the current user.
 
-Useful fields:
+Possible fields:
 
-- Company name
+- Name
+- Website
+- Industry
 - Location
-- Number of contacts
-- Most recent contact interaction
-- Next follow-up among contacts at that company
+- Contact count
 
-## Company detail
+### Company Detail
 
 Show:
 
 - Company profile
 - Notes
-- Contacts at that company
-- Recent interactions with people at that company
-- Upcoming follow-ups connected to people at that company
+- Associated contacts
 
-## Dashboard
+### Dashboard
 
 Show:
 
@@ -891,7 +904,7 @@ Show:
 - Contacts with no next action
 - Dormant contacts
 
-## Job-search workflow examples
+### Job-Search Workflow Examples
 
 Even though the schema is general, it should support job-search use cases.
 
@@ -907,32 +920,34 @@ Examples:
 
 ## First Vertical Slice: Companies and Contacts
 
-The first vertical slice should establish the basic relationship between companies and contacts.
+The first vertical slice should be companies and contacts.
 
-### Backend endpoints
+### GraphQL Operations
 
 ```text
-POST /companies
-GET /companies
-GET /companies/{id}
+query companies
+query company(id)
+mutation createCompany
+mutation updateCompany
 
-POST /contacts
-GET /contacts
-GET /contacts/{id}
+query contacts
+query contact(id)
+mutation createContact
+mutation updateContact
 ```
 
-### Frontend screens
+### Frontend Screens
 
 ```text
 Company list
-Company detail page
 Create company form
+Company detail page
 Contact list
 Create contact form
 Contact detail page
 ```
 
-### Database tables involved
+### Database Tables Involved
 
 ```text
 users
@@ -940,134 +955,136 @@ companies
 contacts
 ```
 
-### Success criteria
+### Success Criteria
 
 A user can:
 
 1. Create a company.
-2. View the company in a company list.
+2. See the company in a list.
 3. Open the company detail page.
 4. Create a contact.
 5. Optionally associate the contact with a company.
-6. See the contact in a contact list.
+6. See the contact in a list.
 7. Open the contact detail page.
-8. See company information on the contact detail page.
-9. See contacts associated with a company on the company detail page.
-10. Refresh the app and see all data still persisted in Postgres.
+8. Refresh the app and see the data still persisted in Postgres.
 
 ## Second Vertical Slice: Interaction Logging
 
 The second vertical slice should be interaction logging.
 
-### Backend endpoints
+### GraphQL Operations
 
 ```text
-POST /contacts/{id}/interactions
-GET /contacts/{id}/interactions
-PATCH /interactions/{id}
+query contact(id) with interactions
+mutation createInteraction
+mutation updateInteraction
 ```
 
-### Frontend screens
+### Frontend Screens
 
 ```text
 Interaction form on contact detail page
 Interaction timeline on contact detail page
-Edit interaction form
+Edit interaction form/modal/page
 ```
 
-### Success criteria
+### Success Criteria
 
 A user can:
 
 1. Add an interaction to a contact.
 2. View that interaction in the contact timeline.
-3. Edit the interaction summary or outcome.
+3. Edit that interaction.
 4. See the contact's `last_interaction_at` updated.
 
 ## Third Vertical Slice: Follow-Ups and Dashboard
 
 The third vertical slice should be follow-ups.
 
-### Backend endpoints
+### GraphQL Operations
 
 ```text
-POST /contacts/{id}/follow-ups
-GET /follow-ups/due
-PATCH /follow-ups/{id}
-PATCH /follow-ups/{id}/complete
-PATCH /follow-ups/{id}/cancel
+mutation createFollowUp
+mutation completeFollowUp
+mutation cancelFollowUp
+query dashboard
 ```
 
-### Frontend screens
+### Frontend Screens
 
 ```text
 Dashboard
 Add follow-up form
-Open follow-up display on contact detail page
+Open follow-up display on contact detail
 Complete follow-up button
-Cancel follow-up button
 ```
 
-### Success criteria
+### Success Criteria
 
 A user can:
 
-1. Add a follow-up to a contact.
-2. Optionally create a follow-up from an interaction.
-3. See the follow-up on the dashboard when it is due.
-4. Reschedule the follow-up by changing its due date/time.
-5. Mark it complete.
-6. Cancel it.
-7. See the contact's `next_follow_up_at` updated.
-8. Be prevented from creating multiple open follow-ups for the same contact.
+1. Add one open follow-up to a contact.
+2. Optionally attach a follow-up to an interaction.
+3. See it on the dashboard when it is due.
+4. Mark it complete.
+5. See the contact's `next_follow_up_at` updated.
 
 ## Fourth Vertical Slice: Birthdays
 
-The fourth vertical slice should make birthdays visible and useful.
+The fourth vertical slice should be birthdays.
 
-### Backend endpoints
-
-Birthdays can be handled through the contact endpoints at first:
+### GraphQL Operations
 
 ```text
-POST /contacts
-GET /contacts
-GET /contacts/{id}
-PATCH /contacts/{id}
+query upcomingBirthdays
+mutation updateContact with birthday fields
 ```
 
-Optional dashboard-specific endpoint:
+### Frontend Screens
 
 ```text
-GET /contacts/birthdays/upcoming
-```
-
-### Frontend screens
-
-```text
-Birthday fields on contact form
+Birthday fields on contact create/edit form
 Birthday display on contact detail page
-Upcoming birthdays on dashboard
+Upcoming birthdays section on dashboard
 ```
 
-### Success criteria
+### Success Criteria
 
 A user can:
 
-1. Add a birthday month and day to a contact.
-2. Optionally add a birthday year.
-3. View the birthday on the contact detail page.
+1. Add birthday info to a contact.
+2. Save month/day with or without a year.
+3. View birthday info on the contact detail page.
 4. See upcoming birthdays on the dashboard.
 
 ## Future Schema Ideas
 
 These are intentionally out of scope for MVP.
 
-## Tags
+### Tags
 
-Tags are useful, but they are outside MVP.
+Tags are not part of MVP.
 
-When added, tags could support flexible grouping such as:
+Future tables:
+
+```text
+tags
+- id
+- user_id
+- name
+- color
+- created_at
+- updated_at
+```
+
+```text
+contact_tags
+- contact_id
+- tag_id
+- created_at
+```
+
+Tags may eventually support flexible organization like:
 
 - Galvanize
 - Hack Reactor
@@ -1077,44 +1094,21 @@ When added, tags could support flexible grouping such as:
 - Frontend
 - Chattanooga
 - Coffee chat
-- Warm connection
 
-Possible tables:
+### Custom Personal Dates
 
-```text
-tags
-- id
-- user_id
-- name
-- color_hex
-- created_at
-- updated_at
+Custom personal dates are post-MVP.
 
-contact_tags
-- contact_id
-- tag_id
-- created_at
-```
-
-Tag colors are optional.
-
-If tags are added, colors may be useful in the UI, but they are not required for the first version of tagging.
-
-## Custom personal dates
-
-Birthdays are part of MVP, but arbitrary personal dates are not.
-
-Future custom dates could use:
+Future table:
 
 ```text
-contact_dates
+personal_dates
 - id
 - contact_id
 - label
 - month
 - day
 - year
-- date_type
 - notes
 - created_at
 - updated_at
@@ -1123,17 +1117,17 @@ contact_dates
 Examples:
 
 - Work anniversary
-- Wedding anniversary
-- Graduation date
-- First met date
-- Important life event
+- First met
+- Last coffee chat
+- Important personal event
 
-## Contact employment history
+### Contact Employment History
 
 If one current company becomes too limited:
 
 ```text
 contact_companies
+- id
 - contact_id
 - company_id
 - role_title
@@ -1144,21 +1138,18 @@ contact_companies
 - updated_at
 ```
 
-## Opportunities or job applications
+### Opportunities or Job Applications
 
-If the app becomes more job-search-specific, job applications could become first-class records.
-
-That would mean adding a table like:
+If the app becomes more job-search-specific:
 
 ```text
-job_applications
+opportunities
 - id
 - user_id
 - company_id
 - title
 - url
 - status
-- applied_at
 - notes
 - created_at
 - updated_at
@@ -1167,16 +1158,14 @@ job_applications
 Possible join table:
 
 ```text
-job_application_contacts
-- job_application_id
+opportunity_contacts
+- opportunity_id
 - contact_id
-- relationship_to_application
+- relationship_to_opportunity
 - created_at
 ```
 
-This is not part of MVP.
-
-## Recurring follow-ups
+### Recurring Follow-Ups
 
 If recurring reminders become important:
 
@@ -1192,15 +1181,15 @@ follow_up_rules
 - updated_at
 ```
 
-## Interaction markdown
+### Interaction Markdown
 
-Markdown support for interaction summaries may be added later.
+Markdown interaction notes are a stretch goal.
 
-This likely does not require a schema change if summaries remain stored as `TEXT`.
+If added, the existing `summary` and `outcome` fields can remain `TEXT`.
 
-The frontend can choose to render the summary as markdown later.
+The frontend can render Markdown safely later.
 
-## Interaction attachments
+### Interaction Attachments
 
 If users want to save files, screenshots, or documents:
 
@@ -1214,11 +1203,9 @@ interaction_attachments
 - created_at
 ```
 
-## CSV import/export
+### CSV Import/Export
 
-CSV import/export is a stretch goal.
-
-Possible import tables:
+If CSV or LinkedIn/manual imports are added:
 
 ```text
 import_batches
@@ -1240,7 +1227,7 @@ imported_contacts
 - created_at
 ```
 
-## Reminders and notifications
+### Reminders and Notifications
 
 If the app sends emails or push notifications:
 
@@ -1256,7 +1243,7 @@ notifications
 - created_at
 ```
 
-## Soft deletion
+### Soft Deletion
 
 If deleted contacts need to be recoverable:
 
@@ -1275,42 +1262,35 @@ This is not needed for MVP.
 
 ## Open Schema Questions
 
-These need product decisions before or during implementation.
+These can be revisited later.
 
-1. Should company names be unique per user?
-2. Should contacts support multiple email addresses later?
-3. Should contacts support multiple phone numbers later?
-4. Should the company detail page show interactions across all contacts at that company?
-5. Should completing a follow-up automatically prompt the user to log an interaction?
-6. Should cancelled follow-ups remain visible in contact history?
-7. Should birthdays without years be displayed differently from birthdays with years?
-8. Should the app remind the user before birthdays, or only show them on the dashboard?
-9. Should contacts have a `met_at` or `first_met_at` field later?
-10. Should follow-up reminders eventually support recurrence?
-11. Should tags be added immediately after the MVP or later?
-12. Should job applications become first-class records later?
-13. Should source eventually become its own table if common sources repeat often?
+1. Should contacts support multiple companies through employment history?
+2. Should follow-ups support snooze history?
+3. Should interactions be deletable or only editable?
+4. Should companies eventually support aliases or domains?
+5. Should birthday reminders eventually become notification records?
+6. Should `source` eventually be normalized, or should it remain free text permanently?
+7. Should dashboard queries be backed by cached fields, database views, or normal service-layer queries?
+8. Should `updated_at` be database-managed or application-managed?
 
 ## Current Product Decisions
 
-These decisions have been made for MVP:
-
-1. `last_name` is not required.
-2. Email should be unique per user when provided.
-3. Contacts do not need to have email, phone, or LinkedIn URL.
-4. Companies are not required for contacts.
-5. Contacts should only have one open follow-up at a time in MVP.
-6. Follow-ups require a specific due date and time.
-7. Interaction summaries will not support markdown in MVP.
-8. Birthdays are part of MVP.
-9. Custom personal dates are post-MVP.
-10. Tags are post-MVP.
-11. Relationship strength/priority is not part of MVP.
-12. CSV import/export is a stretch goal.
-13. Job applications may become first-class records later, but not in MVP.
-14. Interactions should be editable after creation.
-15. Follow-ups can belong to a contact and optionally attach to an interaction.
-16. `source` is free text.
+- `last_name` is not required.
+- Email should be unique per user when present.
+- Contacts do not require email, phone, or LinkedIn URL.
+- Companies are not required for contacts.
+- A contact should only have one open follow-up in MVP.
+- Follow-ups should require due dates with specific times.
+- Interaction summaries do not support Markdown in MVP.
+- Birthdays are part of MVP.
+- Custom personal dates are post-MVP.
+- Tags are post-MVP.
+- Relationship strength or priority should not be included in MVP.
+- CSV import/export is a stretch goal.
+- Job applications may become first-class records later, but are not MVP.
+- Interactions should be editable after creation.
+- Follow-ups should belong to contacts and may optionally belong to interactions.
+- `source` should be a free text field.
 
 ## Initial Recommendation
 
@@ -1325,17 +1305,15 @@ Build in this order:
 5. Follow-ups.
 6. Birthdays/dashboard visibility.
 
-Avoid adding tags, job applications, recurring reminders, imports, auth, notifications, markdown, or custom personal dates until the core relationship workflow works.
+Avoid adding tags, job applications, recurring reminders, imports, auth, AI features, or notifications until the core relationship workflow works.
 
 The core MVP is complete when a user can:
 
 1. Create a company.
 2. Create a contact.
-3. Associate a contact with a company.
-4. Add a birthday to a contact.
-5. Log an interaction.
-6. Edit an interaction.
-7. Schedule a follow-up.
-8. View due follow-ups on a dashboard.
-9. View upcoming birthdays on a dashboard.
-10. Mark follow-ups complete.
+3. Associate the contact with a company.
+4. Log and edit an interaction.
+5. Schedule and complete a follow-up.
+6. View due follow-ups on a dashboard.
+7. Add birthday info.
+8. View upcoming birthdays.
