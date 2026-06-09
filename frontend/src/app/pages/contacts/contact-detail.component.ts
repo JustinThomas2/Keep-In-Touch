@@ -90,10 +90,11 @@ export class ContactDetailComponent {
   );
 
   birthday(month: number | null, day: number | null, year: number | null): string {
-    if (!month || !day) {
+    if (month === null || day === null) {
       return 'Not set';
     }
 
-    return year ? `${month}/${day}/${year}` : `${month}/${day}`;
+    const monthDay = `${String(month)}/${String(day)}`;
+    return year === null ? monthDay : `${monthDay}/${String(year)}`;
   }
 }

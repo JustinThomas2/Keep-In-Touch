@@ -1,11 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CrmService } from '../../core/crm.service';
 import { ContactStatus, RelationshipType } from '../../core/crm.types';
 import { blankToNull, numberOrNull, requiredText } from '../../core/form-utils';
+
+function required(control: AbstractControl): ValidationErrors | null {
+  return Validators.required(control);
+}
 
 @Component({
   selector: 'app-contact-create',
@@ -194,7 +198,7 @@ export class ContactCreateComponent {
 
   readonly form = this.fb.nonNullable.group({
     companyId: [''],
-    firstName: ['', Validators.required],
+    firstName: ['', required],
     lastName: [''],
     preferredName: [''],
     roleTitle: [''],
@@ -202,8 +206,8 @@ export class ContactCreateComponent {
     linkedinUrl: [''],
     email: [''],
     phone: [''],
-    relationshipType: ['PROFESSIONAL' as RelationshipType, Validators.required],
-    status: ['NEW' as ContactStatus],
+    relationshipType: this.fb.nonNullable.control<RelationshipType>('PROFESSIONAL', { validators: [required] }),
+    status: this.fb.nonNullable.control<ContactStatus>('NEW'),
     source: [''],
     notes: [''],
     birthdayMonth: [''],
@@ -213,7 +217,7 @@ export class ContactCreateComponent {
 
   constructor() {
     const companyId = this.route.snapshot.queryParamMap.get('companyId');
-    if (companyId) {
+    if (companyId !== null && companyId.length > 0) {
       this.form.controls.companyId.setValue(companyId);
     }
   }

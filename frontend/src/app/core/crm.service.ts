@@ -1,123 +1,26 @@
 import { Injectable } from '@angular/core';
-import { Apollo, gql } from 'apollo-angular';
+import { Apollo, onlyCompleteData } from 'apollo-angular';
 import { map, Observable } from 'rxjs';
 
-import { Company, Contact, CreateCompanyInput, CreateContactInput } from './crm.types';
-
-const COMPANY_FIELDS = gql`
-  fragment CompanyFields on Company {
-    id
-    name
-    website
-    industry
-    location
-    notes
-    createdAt
-    updatedAt
-  }
-`;
-
-const CONTACT_FIELDS = gql`
-  fragment ContactFields on Contact {
-    id
-    firstName
-    lastName
-    preferredName
-    roleTitle
-    location
-    linkedinUrl
-    email
-    phone
-    relationshipType
-    status
-    source
-    notes
-    birthdayMonth
-    birthdayDay
-    birthdayYear
-    lastInteractionAt
-    nextFollowUpAt
-    createdAt
-    updatedAt
-    company {
-      id
-      name
-      website
-      industry
-      location
-    }
-  }
-`;
-
-const COMPANIES_QUERY = gql`
-  ${COMPANY_FIELDS}
-  query Companies {
-    companies {
-      ...CompanyFields
-    }
-  }
-`;
-
-const COMPANY_QUERY = gql`
-  ${COMPANY_FIELDS}
-  query Company($id: ID!) {
-    company(id: $id) {
-      ...CompanyFields
-      contacts {
-        id
-        firstName
-        lastName
-        email
-        roleTitle
-        status
-        relationshipType
-        company {
-          id
-          name
-          website
-          industry
-          location
-        }
-      }
-    }
-  }
-`;
-
-const CONTACTS_QUERY = gql`
-  ${CONTACT_FIELDS}
-  query Contacts {
-    contacts {
-      ...ContactFields
-    }
-  }
-`;
-
-const CONTACT_QUERY = gql`
-  ${CONTACT_FIELDS}
-  query Contact($id: ID!) {
-    contact(id: $id) {
-      ...ContactFields
-    }
-  }
-`;
-
-const CREATE_COMPANY_MUTATION = gql`
-  ${COMPANY_FIELDS}
-  mutation CreateCompany($input: CreateCompanyInput!) {
-    createCompany(input: $input) {
-      ...CompanyFields
-    }
-  }
-`;
-
-const CREATE_CONTACT_MUTATION = gql`
-  ${CONTACT_FIELDS}
-  mutation CreateContact($input: CreateContactInput!) {
-    createContact(input: $input) {
-      ...ContactFields
-    }
-  }
-`;
+import type { Company, CompanyDetail, Contact, CreateCompanyInput, CreateContactInput } from './crm.types';
+import {
+  CompaniesDocument,
+  CompaniesQuery,
+  CompanyDocument,
+  CompanyQuery,
+  CompanyQueryVariables,
+  ContactDocument,
+  ContactQuery,
+  ContactQueryVariables,
+  ContactsDocument,
+  ContactsQuery,
+  CreateCompanyDocument,
+  CreateCompanyMutation,
+  CreateCompanyMutationVariables,
+  CreateContactDocument,
+  CreateContactMutation,
+  CreateContactMutationVariables
+} from './graphql/generated';
 
 @Injectable({ providedIn: 'root' })
 export class CrmService {
@@ -125,59 +28,79 @@ export class CrmService {
 
   companies(): Observable<Company[]> {
     return this.apollo
-      .watchQuery<{ companies: Company[] }>({
-        query: COMPANIES_QUERY,
+      .watchQuery<CompaniesQuery>({
+        query: CompaniesDocument,
         fetchPolicy: 'cache-and-network'
       })
-      .valueChanges.pipe(map((result) => (result.data as { companies: Company[] } | undefined)?.companies ?? []));
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.companies)
+      );
   }
 
-  company(id: string): Observable<Company | null> {
+  company(id: string): Observable<CompanyDetail | null> {
     return this.apollo
-      .watchQuery<{ company: Company | null }>({
-        query: COMPANY_QUERY,
+      .watchQuery<CompanyQuery, CompanyQueryVariables>({
+        query: CompanyDocument,
         variables: { id },
         fetchPolicy: 'cache-and-network'
       })
-      .valueChanges.pipe(map((result) => (result.data as { company: Company | null } | undefined)?.company ?? null));
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.company)
+      );
   }
 
   contacts(): Observable<Contact[]> {
     return this.apollo
-      .watchQuery<{ contacts: Contact[] }>({
-        query: CONTACTS_QUERY,
+      .watchQuery<ContactsQuery>({
+        query: ContactsDocument,
         fetchPolicy: 'cache-and-network'
       })
-      .valueChanges.pipe(map((result) => (result.data as { contacts: Contact[] } | undefined)?.contacts ?? []));
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.contacts)
+      );
   }
 
   contact(id: string): Observable<Contact | null> {
     return this.apollo
-      .watchQuery<{ contact: Contact | null }>({
-        query: CONTACT_QUERY,
+      .watchQuery<ContactQuery, ContactQueryVariables>({
+        query: ContactDocument,
         variables: { id },
         fetchPolicy: 'cache-and-network'
       })
-      .valueChanges.pipe(map((result) => (result.data as { contact: Contact | null } | undefined)?.contact ?? null));
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.contact)
+      );
   }
 
   createCompany(input: CreateCompanyInput): Observable<Company> {
     return this.apollo
-      .mutate<{ createCompany: Company }>({
-        mutation: CREATE_COMPANY_MUTATION,
+      .mutate<CreateCompanyMutation, CreateCompanyMutationVariables>({
+        mutation: CreateCompanyDocument,
         variables: { input },
-        refetchQueries: [{ query: COMPANIES_QUERY }]
+        refetchQueries: [{ query: CompaniesDocument }]
       })
-      .pipe(map((result) => result.data?.createCompany as Company));
+      .pipe(map((result) => this.requiredData(result.data).createCompany));
   }
 
   createContact(input: CreateContactInput): Observable<Contact> {
     return this.apollo
-      .mutate<{ createContact: Contact }>({
-        mutation: CREATE_CONTACT_MUTATION,
+      .mutate<CreateContactMutation, CreateContactMutationVariables>({
+        mutation: CreateContactDocument,
         variables: { input },
-        refetchQueries: [{ query: CONTACTS_QUERY }, { query: COMPANIES_QUERY }]
+        refetchQueries: [{ query: ContactsDocument }, { query: CompaniesDocument }]
       })
-      .pipe(map((result) => result.data?.createContact as Contact));
+      .pipe(map((result) => this.requiredData(result.data).createContact));
+  }
+
+  private requiredData<T>(data: T | null | undefined): T {
+    if (data === null || data === undefined) {
+      throw new Error('GraphQL mutation completed without response data.');
+    }
+
+    return data;
   }
 }

@@ -1,0 +1,89 @@
+fragment CompanyFields on Company {
+  id
+  name
+  website
+  industry
+  location
+  notes
+  createdAt
+  updatedAt
+}
+
+fragment CompanyDetailFields on Company {
+  ...CompanyFields
+  contacts {
+    id
+    firstName
+    lastName
+    email
+    roleTitle
+    status
+    relationshipType
+  }
+}
+
+fragment ContactFields on Contact {
+  id
+  firstName
+  lastName
+  preferredName
+  roleTitle
+  location
+  linkedinUrl
+  email
+  phone
+  relationshipType
+  status
+  source
+  notes
+  birthdayMonth
+  birthdayDay
+  birthdayYear
+  lastInteractionAt
+  nextFollowUpAt
+  createdAt
+  updatedAt
+  company {
+    id
+    name
+    website
+    industry
+    location
+  }
+}
+
+query Companies {
+  companies {
+    ...CompanyFields
+  }
+}
+
+query Company($id: ID!) {
+  company(id: $id) {
+    ...CompanyDetailFields
+  }
+}
+
+query Contacts {
+  contacts {
+    ...ContactFields
+  }
+}
+
+query Contact($id: ID!) {
+  contact(id: $id) {
+    ...ContactFields
+  }
+}
+
+mutation CreateCompany($input: CreateCompanyInput!) {
+  createCompany(input: $input) {
+    ...CompanyFields
+  }
+}
+
+mutation CreateContact($input: CreateContactInput!) {
+  createContact(input: $input) {
+    ...ContactFields
+  }
+}

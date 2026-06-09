@@ -1,10 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { CrmService } from '../../core/crm.service';
 import { blankToNull, requiredText } from '../../core/form-utils';
+
+function required(control: AbstractControl): ValidationErrors | null {
+  return Validators.required(control);
+}
 
 @Component({
   selector: 'app-company-create',
@@ -78,7 +82,7 @@ export class CompanyCreateComponent {
   saving = false;
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', Validators.required],
+    name: ['', required],
     website: [''],
     industry: [''],
     location: [''],
