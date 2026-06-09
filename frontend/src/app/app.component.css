@@ -1,0 +1,38 @@
+.app-header {
+  border-bottom: 1px solid #d8dee6;
+}
+
+.brand {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.navbar-item.is-active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.actions {
+  gap: 0.5rem;
+}
+
+.app-main {
+  min-height: calc(100vh - 3.25rem);
+  background: #f6f7f9;
+  padding: 2rem 1rem 3rem;
+}
+
+@media (max-width: 760px) {
+  .navbar-menu {
+    display: block;
+    box-shadow: none;
+  }
+
+  .navbar-start,
+  .navbar-end,
+  .actions {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+}
