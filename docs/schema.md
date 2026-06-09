@@ -34,6 +34,7 @@
   - [Contacts and Follow-Ups](#contacts-and-follow-ups)
   - [Follow-Ups and Interactions](#follow-ups-and-interactions)
   - [Birthdays](#birthdays)
+  - [Delete Behavior](#delete-behavior)
 - [Suggested Indexes](#suggested-indexes)
 - [Suggested Unique Indexes](#suggested-unique-indexes)
 - [MVP Query Patterns](#mvp-query-patterns)
@@ -411,7 +412,8 @@ Examples:
 ### Constraints
 
 - `id` primary key
-- `user_id` references `users(id)`
+- `user_id` references `users(id)` with `ON DELETE CASCADE`
+- `(id, user_id)` unique for composite ownership references
 - `name` not null
 
 ### Notes
@@ -460,15 +462,17 @@ This is the core table of the app.
 ### Constraints
 
 - `id` primary key
-- `user_id` references `users(id)`
-- `company_id` references `companies(id)`
+- `user_id` references `users(id)` with `ON DELETE CASCADE`
+- `(company_id, user_id)` references `companies(id, user_id)` with restrictive delete behavior
 - `first_name` not null
 - `relationship_type` not null
 - `status` not null
-- `birthday_month` should be between 1 and 12 when present
-- `birthday_day` should be between 1 and 31 when present
 - If `birthday_day` is set, `birthday_month` should also be set
 - If `birthday_month` is set, `birthday_day` should also be set
+- If `birthday_year` is set, `birthday_month` and `birthday_day` should also be set
+- `birthday_month` should be between 1 and 12 when present
+- `birthday_day` should be valid for the selected month
+- February 29 is allowed without a year, but if `birthday_year` is present then the year must be a leap year
 - Email should be unique per user when present
 
 ### Notes
@@ -487,7 +491,7 @@ They can be recalculated from `interactions` and `follow_ups`, but storing them 
 
 When an interaction is created or updated, the backend should update `contacts.last_interaction_at`.
 
-When an open follow-up is created, completed, snoozed, or cancelled, the backend should update `contacts.next_follow_up_at`.
+When an open follow-up is created, completed, cancelled, or has its due date changed, the backend should update `contacts.next_follow_up_at`.
 
 ---
 
@@ -521,7 +525,8 @@ Examples:
 ### Constraints
 
 - `id` primary key
-- `contact_id` references `contacts(id)`
+- `contact_id` references `contacts(id)` with `ON DELETE CASCADE`
+- `(id, contact_id)` unique for composite ownership references
 - `interaction_type` not null
 - `occurred_at` not null
 - `summary` not null
@@ -566,7 +571,7 @@ Examples:
 | `contact_id` | `UUID` | yes | Related contact |
 | `interaction_id` | `UUID` | no | Optional related interaction |
 | `due_at` | `TIMESTAMPTZ` | yes | When follow-up is due |
-| `status` | `VARCHAR(50)` | yes | Open/completed/snoozed/cancelled |
+| `status` | `VARCHAR(50)` | yes | Open/completed/cancelled |
 | `reason` | `TEXT` | no | Why this follow-up exists |
 | `completed_at` | `TIMESTAMPTZ` | no | When it was completed |
 | `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
@@ -575,10 +580,14 @@ Examples:
 ### Constraints
 
 - `id` primary key
-- `contact_id` references `contacts(id)`
-- `interaction_id` references `interactions(id)`
+- `contact_id` references `contacts(id)` with `ON DELETE CASCADE`
+- `(interaction_id, contact_id)` references `interactions(id, contact_id)` so attached interactions must belong to the same contact
+- If an attached interaction is deleted, `interaction_id` is set to null and the follow-up is kept
 - `due_at` not null
 - `status` not null
+- `status` must be `OPEN`, `COMPLETED`, or `CANCELLED`
+- `COMPLETED` follow-ups require `completed_at`
+- Non-`COMPLETED` follow-ups require `completed_at` to be null
 - MVP should enforce only one open follow-up per contact
 
 ### Notes
@@ -668,15 +677,14 @@ Describes the state of a follow-up.
 ```text
 OPEN
 COMPLETED
-SNOOZED
 CANCELLED
 ```
 
 ### Notes
 
-For MVP, `SNOOZED` may simply mean the due date was changed.
+For MVP, changing a follow-up date should update `due_at` while the follow-up remains `OPEN`.
 
-Later, if snooze history matters, we can add a separate follow-up events table.
+Later, if due-date change history matters, we can add a separate follow-up events table.
 
 ## Relationship Notes
 
@@ -698,11 +706,20 @@ Since interactions and follow-ups belong to contacts, and contacts belong to use
 
 If query performance or authorization checks become annoying later, we can consider adding `user_id` to those tables too.
 
+The database enforces ownership consistency where optional cross-table links exist:
+
+- Contacts reference companies through `(company_id, user_id) -> companies(id, user_id)` so a contact cannot point to another user's company.
+- Follow-ups reference interactions through `(interaction_id, contact_id) -> interactions(id, contact_id)` so a follow-up cannot point to another contact's interaction.
+
 ### Contacts and Companies
 
 A contact can have zero or one current company.
 
 This is intentionally simple.
+
+The contact/company relationship keeps `company_id` nullable, but if present the referenced company must belong to the same user as the contact.
+
+A company cannot be deleted while contacts still reference it.
 
 A more complete model could support employment history:
 
@@ -756,6 +773,8 @@ The follow-up belongs to Sarah's contact record, but it can also reference that 
 
 This makes the follow-up easier to understand later.
 
+If the referenced interaction is deleted, the follow-up should remain and `interaction_id` should be set to null.
+
 ### Birthdays
 
 Birthdays are part of MVP.
@@ -772,7 +791,20 @@ This is intentional because a user may know someone's birthday month/day without
 
 Birthday year should be optional.
 
+The database should reject a birthday year without a birthday month and day. It should also reject invalid month/day combinations. Months with 31 days allow days 1-31, months with 30 days allow days 1-30, and February allows days 1-29. If `birthday_year` is present for February 29, the year must be a leap year.
+
 Custom personal dates beyond birthdays are post-MVP.
+
+### Delete Behavior
+
+MVP uses hard deletes with explicit database behavior:
+
+- Deleting a user deletes that user's companies and contacts.
+- Deleting a contact deletes its interactions and follow-ups.
+- Deleting a company is restricted while contacts still reference it.
+- Deleting an interaction clears `follow_ups.interaction_id` but does not delete the follow-up.
+
+Soft deletion is not part of MVP.
 
 ## Suggested Indexes
 
@@ -788,35 +820,29 @@ CREATE INDEX idx_contacts_user_id
 CREATE INDEX idx_contacts_company_id
     ON contacts(company_id);
 
-CREATE INDEX idx_contacts_status
-    ON contacts(status);
+CREATE INDEX idx_contacts_user_status
+    ON contacts(user_id, status);
 
-CREATE INDEX idx_contacts_next_follow_up_at
-    ON contacts(next_follow_up_at);
+CREATE INDEX idx_contacts_user_next_follow_up_at
+    ON contacts(user_id, next_follow_up_at);
 
-CREATE INDEX idx_contacts_last_interaction_at
-    ON contacts(last_interaction_at);
+CREATE INDEX idx_contacts_user_last_interaction_at
+    ON contacts(user_id, last_interaction_at);
 
-CREATE INDEX idx_contacts_birthday_month_day
-    ON contacts(birthday_month, birthday_day);
+CREATE INDEX idx_contacts_user_birthday_month_day
+    ON contacts(user_id, birthday_month, birthday_day);
 
-CREATE INDEX idx_interactions_contact_id
-    ON interactions(contact_id);
-
-CREATE INDEX idx_interactions_occurred_at
-    ON interactions(occurred_at);
-
-CREATE INDEX idx_follow_ups_contact_id
-    ON follow_ups(contact_id);
+CREATE INDEX idx_interactions_contact_occurred_at
+    ON interactions(contact_id, occurred_at DESC);
 
 CREATE INDEX idx_follow_ups_interaction_id
     ON follow_ups(interaction_id);
 
-CREATE INDEX idx_follow_ups_status
-    ON follow_ups(status);
+CREATE INDEX idx_follow_ups_contact_status
+    ON follow_ups(contact_id, status);
 
-CREATE INDEX idx_follow_ups_due_at
-    ON follow_ups(due_at);
+CREATE INDEX idx_follow_ups_status_due_at
+    ON follow_ups(status, due_at);
 ```
 
 ## Suggested Unique Indexes
@@ -1265,7 +1291,7 @@ This is not needed for MVP.
 These can be revisited later.
 
 1. Should contacts support multiple companies through employment history?
-2. Should follow-ups support snooze history?
+2. Should follow-ups support due-date change history?
 3. Should interactions be deletable or only editable?
 4. Should companies eventually support aliases or domains?
 5. Should birthday reminders eventually become notification records?
