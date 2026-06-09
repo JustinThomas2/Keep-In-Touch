@@ -1,3 +1,128 @@
+enum ContactStatus {
+  NEW
+  REACHED_OUT
+  WAITING_FOR_RESPONSE
+  CONVERSATION_SCHEDULED
+  ACTIVE
+  DORMANT
+  PAUSED
+  DO_NOT_CONTACT
+}
+
+enum RelationshipType {
+  FRIEND
+  FORMER_COWORKER
+  ALUMNI
+  RECRUITER
+  MENTOR
+  COMMUNITY
+  PROFESSIONAL
+  OTHER
+}
+
 type Query {
   health: String!
+  companies: [Company!]!
+  company(id: ID!): Company
+  contacts: [Contact!]!
+  contact(id: ID!): Contact
+}
+
+type Mutation {
+  createCompany(input: CreateCompanyInput!): Company!
+  updateCompany(input: UpdateCompanyInput!): Company!
+  createContact(input: CreateContactInput!): Contact!
+  updateContact(input: UpdateContactInput!): Contact!
+}
+
+type Company {
+  id: ID!
+  name: String!
+  website: String
+  industry: String
+  location: String
+  notes: String
+  createdAt: String
+  updatedAt: String
+  contacts: [Contact!]!
+}
+
+type Contact {
+  id: ID!
+  firstName: String!
+  lastName: String
+  preferredName: String
+  roleTitle: String
+  location: String
+  linkedinUrl: String
+  email: String
+  phone: String
+  relationshipType: RelationshipType!
+  status: ContactStatus!
+  source: String
+  notes: String
+  birthdayMonth: Int
+  birthdayDay: Int
+  birthdayYear: Int
+  lastInteractionAt: String
+  nextFollowUpAt: String
+  createdAt: String
+  updatedAt: String
+  company: Company
+}
+
+input CreateCompanyInput {
+  name: String!
+  website: String
+  industry: String
+  location: String
+  notes: String
+}
+
+input UpdateCompanyInput {
+  id: ID!
+  name: String!
+  website: String
+  industry: String
+  location: String
+  notes: String
+}
+
+input CreateContactInput {
+  companyId: ID
+  firstName: String!
+  lastName: String
+  preferredName: String
+  roleTitle: String
+  location: String
+  linkedinUrl: String
+  email: String
+  phone: String
+  relationshipType: RelationshipType!
+  status: ContactStatus
+  source: String
+  notes: String
+  birthdayMonth: Int
+  birthdayDay: Int
+  birthdayYear: Int
+}
+
+input UpdateContactInput {
+  id: ID!
+  companyId: ID
+  firstName: String!
+  lastName: String
+  preferredName: String
+  roleTitle: String
+  location: String
+  linkedinUrl: String
+  email: String
+  phone: String
+  relationshipType: RelationshipType!
+  status: ContactStatus
+  source: String
+  notes: String
+  birthdayMonth: Int
+  birthdayDay: Int
+  birthdayYear: Int
 }

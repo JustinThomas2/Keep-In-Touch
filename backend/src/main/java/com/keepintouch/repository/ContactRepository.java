@@ -17,5 +17,7 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
 
 	List<Contact> findByCompanyIdOrderByFirstNameAscLastNameAsc(UUID companyId);
 
+	Optional<Contact> findByIdAndUserId(UUID id, UUID userId);
+
 	Optional<Contact> findByUserIdAndEmailIgnoreCase(UUID userId, String email);
 }
