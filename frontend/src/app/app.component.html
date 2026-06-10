@@ -27,6 +27,9 @@
       </div>
       <div class="navbar-end">
         <div class="navbar-item actions">
+          <button class="button is-light" type="button" (click)="toggleTheme()">
+            {{ themeButtonText }}
+          </button>
           <a class="button is-link is-light" routerLink="/companies/new"
             >New company</a
           >

@@ -1,14 +1,29 @@
 .app-header {
-  border-bottom: 1px solid #d8dee6;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.navbar.is-white,
+.navbar-menu {
+  background: var(--app-panel-background);
+}
+
+.navbar-item {
+  color: var(--app-text);
+}
+
+.navbar-item:hover,
+.navbar-item:focus {
+  background: var(--button-light-background);
+  color: var(--app-text-strong);
 }
 
 .brand {
-  color: #1f2937;
+  color: var(--app-text-strong);
   font-weight: 700;
 }
 
 .navbar-item.is-active {
-  color: #2563eb;
+  color: var(--app-link);
   font-weight: 600;
 }
 
@@ -18,7 +33,7 @@
 
 .app-main {
   min-height: calc(100vh - 3.25rem);
-  background: #f6f7f9;
+  background: var(--app-background);
   padding: 2rem 1rem 3rem;
 }
 
