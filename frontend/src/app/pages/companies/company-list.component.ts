@@ -20,11 +20,17 @@ import { CrmService } from '../../core/crm.service';
       <ng-container *ngIf="companies$ | async as companies; else loading">
         <div class="empty-state" *ngIf="companies.length === 0">
           <p class="has-text-weight-semibold">No companies yet.</p>
-          <p class="row-meta">Create a company before associating contacts with it.</p>
+          <p class="row-meta">
+            Create a company before associating contacts with it.
+          </p>
         </div>
 
         <div class="list-grid" *ngIf="companies.length > 0">
-          <a class="list-row" *ngFor="let company of companies" [routerLink]="['/companies', company.id]">
+          <a
+            class="list-row"
+            *ngFor="let company of companies"
+            [routerLink]="['/companies', company.id]"
+          >
             <div>
               <div class="row-title">{{ company.name }}</div>
               <div class="row-meta">
@@ -41,7 +47,7 @@ import { CrmService } from '../../core/crm.service';
         <div class="empty-state">Loading companies...</div>
       </ng-template>
     </section>
-  `
+  `,
 })
 export class CompanyListComponent {
   private readonly crm = inject(CrmService);

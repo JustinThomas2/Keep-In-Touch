@@ -20,16 +20,26 @@ import { CrmService } from '../../core/crm.service';
       <ng-container *ngIf="contacts$ | async as contacts; else loading">
         <div class="empty-state" *ngIf="contacts.length === 0">
           <p class="has-text-weight-semibold">No contacts yet.</p>
-          <p class="row-meta">Create your first contact to start the relationship workflow.</p>
+          <p class="row-meta">
+            Create your first contact to start the relationship workflow.
+          </p>
         </div>
 
         <div class="list-grid" *ngIf="contacts.length > 0">
-          <a class="list-row" *ngFor="let contact of contacts" [routerLink]="['/contacts', contact.id]">
+          <a
+            class="list-row"
+            *ngFor="let contact of contacts"
+            [routerLink]="['/contacts', contact.id]"
+          >
             <div>
-              <div class="row-title">{{ contact.firstName }} {{ contact.lastName || '' }}</div>
+              <div class="row-title">
+                {{ contact.firstName }} {{ contact.lastName || '' }}
+              </div>
               <div class="row-meta">
                 {{ contact.company?.name || 'No company' }}
-                <span *ngIf="contact.roleTitle"> · {{ contact.roleTitle }}</span>
+                <span *ngIf="contact.roleTitle">
+                  · {{ contact.roleTitle }}</span
+                >
                 <span *ngIf="contact.email"> · {{ contact.email }}</span>
               </div>
             </div>
@@ -42,7 +52,7 @@ import { CrmService } from '../../core/crm.service';
         <div class="empty-state">Loading contacts...</div>
       </ng-template>
     </section>
-  `
+  `,
 })
 export class ContactListComponent {
   private readonly crm = inject(CrmService);

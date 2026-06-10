@@ -16,7 +16,7 @@ function required(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-contact-detail',
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './contact-detail.component.html'
+  templateUrl: './contact-detail.component.html',
 })
 export class ContactDetailComponent {
   private readonly route = inject(ActivatedRoute);
@@ -38,40 +38,49 @@ export class ContactDetailComponent {
     'SLACK',
     'IN_PERSON',
     'APPLICATION_REFERRAL',
-    'OTHER'
+    'OTHER',
   ];
 
   readonly interactionForm = this.fb.nonNullable.group({
-    interactionType: this.fb.nonNullable.control<InteractionType>('EMAIL', { validators: [required] }),
+    interactionType: this.fb.nonNullable.control<InteractionType>('EMAIL', {
+      validators: [required],
+    }),
     occurredAt: [this.toDateTimeLocal(new Date()), required],
     summary: ['', required],
-    outcome: ['']
+    outcome: [''],
   });
 
   readonly followUpForm = this.fb.nonNullable.group({
-    dueAt: [this.toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)), required],
+    dueAt: [
+      this.toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      required,
+    ],
     interactionId: [''],
-    reason: ['']
+    reason: [''],
   });
 
   private readonly contactId$ = this.route.paramMap.pipe(
     map((params) => params.get('id') ?? ''),
-    shareReplay({ bufferSize: 1, refCount: true })
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   readonly contact$ = this.contactId$.pipe(
-    switchMap((id) => this.crm.contact(id))
+    switchMap((id) => this.crm.contact(id)),
   );
 
   readonly interactions$ = this.contactId$.pipe(
-    switchMap((contactId) => this.crm.contactInteractions(contactId))
+    switchMap((contactId) => this.crm.contactInteractions(contactId)),
   );
 
   readonly openFollowUp$ = this.contactId$.pipe(
-    switchMap((contactId) => this.crm.openFollowUp(contactId))
+    switchMap((contactId) => this.crm.openFollowUp(contactId)),
   );
 
-  birthday(month: number | null, day: number | null, year: number | null): string {
+  birthday(
+    month: number | null,
+    day: number | null,
+    year: number | null,
+  ): string {
     if (month === null || day === null) {
       return 'Not set';
     }
@@ -92,7 +101,7 @@ export class ContactDetailComponent {
 
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: 'medium',
-      timeStyle: 'short'
+      timeStyle: 'short',
     }).format(date);
   }
 
@@ -103,7 +112,7 @@ export class ContactDetailComponent {
       interactionType: interaction.interactionType,
       occurredAt: this.toDateTimeLocal(new Date(interaction.occurredAt)),
       summary: interaction.summary,
-      outcome: interaction.outcome ?? ''
+      outcome: interaction.outcome ?? '',
     });
   }
 
@@ -129,15 +138,19 @@ export class ContactDetailComponent {
     };
     try {
       input = this.toInteractionInput(value);
-    }
-    catch {
-      this.interactionError = 'Interaction could not be saved. Check required fields and date/time.';
+    } catch {
+      this.interactionError =
+        'Interaction could not be saved. Check required fields and date/time.';
       this.savingInteraction = false;
       return;
     }
-    const request = this.editingInteractionId === null
-      ? this.crm.createInteraction({ contactId, ...input })
-      : this.crm.updateInteraction({ id: this.editingInteractionId, ...input }, contactId);
+    const request =
+      this.editingInteractionId === null
+        ? this.crm.createInteraction({ contactId, ...input })
+        : this.crm.updateInteraction(
+            { id: this.editingInteractionId, ...input },
+            contactId,
+          );
 
     request.subscribe({
       next: () => {
@@ -146,9 +159,10 @@ export class ContactDetailComponent {
         this.resetInteractionForm();
       },
       error: () => {
-        this.interactionError = 'Interaction could not be saved. Check required fields and date/time.';
+        this.interactionError =
+          'Interaction could not be saved. Check required fields and date/time.';
         this.savingInteraction = false;
-      }
+      },
     });
   }
 
@@ -162,29 +176,35 @@ export class ContactDetailComponent {
     const value = this.followUpForm.getRawValue();
     let dueAt: string;
     try {
-      dueAt = this.toIsoDateTime(value.dueAt, 'Follow-up date/time is invalid.');
-    }
-    catch {
-      this.followUpError = 'Follow-up could not be saved. Check required fields and date/time.';
+      dueAt = this.toIsoDateTime(
+        value.dueAt,
+        'Follow-up date/time is invalid.',
+      );
+    } catch {
+      this.followUpError =
+        'Follow-up could not be saved. Check required fields and date/time.';
       this.savingFollowUp = false;
       return;
     }
 
-    this.crm.createFollowUp({
-      contactId,
-      interactionId: blankToNull(value.interactionId),
-      dueAt,
-      reason: blankToNull(value.reason)
-    }).subscribe({
-      next: () => {
-        this.savingFollowUp = false;
-        this.resetFollowUpForm();
-      },
-      error: () => {
-        this.followUpError = 'Follow-up could not be saved. This contact may already have an open follow-up.';
-        this.savingFollowUp = false;
-      }
-    });
+    this.crm
+      .createFollowUp({
+        contactId,
+        interactionId: blankToNull(value.interactionId),
+        dueAt,
+        reason: blankToNull(value.reason),
+      })
+      .subscribe({
+        next: () => {
+          this.savingFollowUp = false;
+          this.resetFollowUpForm();
+        },
+        error: () => {
+          this.followUpError =
+            'Follow-up could not be saved. This contact may already have an open follow-up.';
+          this.savingFollowUp = false;
+        },
+      });
   }
 
   completeFollowUp(id: string, contactId: string): void {
@@ -201,7 +221,7 @@ export class ContactDetailComponent {
       error: () => {
         this.followUpError = 'Follow-up could not be completed.';
         this.completingFollowUpId = null;
-      }
+      },
     });
   }
 
@@ -219,7 +239,7 @@ export class ContactDetailComponent {
       error: () => {
         this.followUpError = 'Follow-up could not be cancelled.';
         this.completingFollowUpId = null;
-      }
+      },
     });
   }
 
@@ -228,7 +248,7 @@ export class ContactDetailComponent {
       interactionType: 'EMAIL',
       occurredAt: this.toDateTimeLocal(new Date()),
       summary: '',
-      outcome: ''
+      outcome: '',
     });
   }
 
@@ -236,7 +256,7 @@ export class ContactDetailComponent {
     this.followUpForm.setValue({
       dueAt: this.toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)),
       interactionId: '',
-      reason: ''
+      reason: '',
     });
   }
 
@@ -245,11 +265,16 @@ export class ContactDetailComponent {
       return '';
     }
 
-    const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    const localTime = new Date(
+      date.getTime() - date.getTimezoneOffset() * 60000,
+    );
     return localTime.toISOString().slice(0, 16);
   }
 
-  private toIsoDateTime(value: string, message = 'Interaction date/time is invalid.'): string {
+  private toIsoDateTime(
+    value: string,
+    message = 'Interaction date/time is invalid.',
+  ): string {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
       throw new Error(message);
@@ -258,7 +283,9 @@ export class ContactDetailComponent {
     return date.toISOString();
   }
 
-  private toInteractionInput(value: ReturnType<typeof this.interactionForm.getRawValue>): {
+  private toInteractionInput(
+    value: ReturnType<typeof this.interactionForm.getRawValue>,
+  ): {
     interactionType: InteractionType;
     occurredAt: string;
     summary: string;
@@ -268,7 +295,7 @@ export class ContactDetailComponent {
       interactionType: value.interactionType,
       occurredAt: this.toIsoDateTime(value.occurredAt),
       summary: requiredText(value.summary),
-      outcome: blankToNull(value.outcome)
+      outcome: blankToNull(value.outcome),
     };
   }
 }

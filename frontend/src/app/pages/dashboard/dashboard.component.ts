@@ -27,18 +27,40 @@ import type { FollowUp } from '../../core/crm.types';
               </div>
             </div>
 
-            <div class="empty-state" *ngIf="dashboard.overdueFollowUps.length === 0">
+            <div
+              class="empty-state"
+              *ngIf="dashboard.overdueFollowUps.length === 0"
+            >
               <p class="has-text-weight-semibold">No overdue follow-ups.</p>
             </div>
 
-            <div class="list-grid" *ngIf="dashboard.overdueFollowUps.length > 0">
-              <article class="list-row" *ngFor="let followUp of dashboard.overdueFollowUps">
+            <div
+              class="list-grid"
+              *ngIf="dashboard.overdueFollowUps.length > 0"
+            >
+              <article
+                class="list-row"
+                *ngFor="let followUp of dashboard.overdueFollowUps"
+              >
                 <div>
-                  <a class="row-title" [routerLink]="['/contacts', followUp.contact.id]">{{ contactName(followUp) }}</a>
-                  <div class="row-meta">{{ formatDateTime(followUp.dueAt) }}</div>
-                  <p class="timeline-summary">{{ followUp.reason || 'No reason recorded' }}</p>
+                  <a
+                    class="row-title"
+                    [routerLink]="['/contacts', followUp.contact.id]"
+                    >{{ contactName(followUp) }}</a
+                  >
+                  <div class="row-meta">
+                    {{ formatDateTime(followUp.dueAt) }}
+                  </div>
+                  <p class="timeline-summary">
+                    {{ followUp.reason || 'No reason recorded' }}
+                  </p>
                 </div>
-                <button class="button is-small is-link" type="button" [disabled]="savingId === followUp.id" (click)="complete(followUp)">
+                <button
+                  class="button is-small is-link"
+                  type="button"
+                  [disabled]="savingId === followUp.id"
+                  (click)="complete(followUp)"
+                >
                   {{ savingId === followUp.id ? 'Completing...' : 'Complete' }}
                 </button>
               </article>
@@ -53,18 +75,37 @@ import type { FollowUp } from '../../core/crm.types';
               </div>
             </div>
 
-            <div class="empty-state" *ngIf="dashboard.dueFollowUps.length === 0">
+            <div
+              class="empty-state"
+              *ngIf="dashboard.dueFollowUps.length === 0"
+            >
               <p class="has-text-weight-semibold">No follow-ups due soon.</p>
             </div>
 
             <div class="list-grid" *ngIf="dashboard.dueFollowUps.length > 0">
-              <article class="list-row" *ngFor="let followUp of dashboard.dueFollowUps">
+              <article
+                class="list-row"
+                *ngFor="let followUp of dashboard.dueFollowUps"
+              >
                 <div>
-                  <a class="row-title" [routerLink]="['/contacts', followUp.contact.id]">{{ contactName(followUp) }}</a>
-                  <div class="row-meta">{{ formatDateTime(followUp.dueAt) }}</div>
-                  <p class="timeline-summary">{{ followUp.reason || 'No reason recorded' }}</p>
+                  <a
+                    class="row-title"
+                    [routerLink]="['/contacts', followUp.contact.id]"
+                    >{{ contactName(followUp) }}</a
+                  >
+                  <div class="row-meta">
+                    {{ formatDateTime(followUp.dueAt) }}
+                  </div>
+                  <p class="timeline-summary">
+                    {{ followUp.reason || 'No reason recorded' }}
+                  </p>
                 </div>
-                <button class="button is-small is-link" type="button" [disabled]="savingId === followUp.id" (click)="complete(followUp)">
+                <button
+                  class="button is-small is-link"
+                  type="button"
+                  [disabled]="savingId === followUp.id"
+                  (click)="complete(followUp)"
+                >
                   {{ savingId === followUp.id ? 'Completing...' : 'Complete' }}
                 </button>
               </article>
@@ -79,7 +120,7 @@ import type { FollowUp } from '../../core/crm.types';
         <div class="empty-state">Loading dashboard...</div>
       </ng-template>
     </section>
-  `
+  `,
 })
 export class DashboardComponent {
   private readonly crm = inject(CrmService);
@@ -101,7 +142,7 @@ export class DashboardComponent {
 
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: 'medium',
-      timeStyle: 'short'
+      timeStyle: 'short',
     }).format(date);
   }
 
@@ -119,7 +160,7 @@ export class DashboardComponent {
       error: () => {
         this.error = 'Follow-up could not be completed.';
         this.savingId = null;
-      }
+      },
     });
   }
 }

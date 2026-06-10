@@ -2,7 +2,7 @@
   <ng-container *ngIf="contact$ | async as contact; else loading">
     <div class="page-header" *ngIf="contact; else missing">
       <div>
-        <h1>{{ contact.firstName }} {{ contact.lastName || '' }}</h1>
+        <h1>{{ contact.firstName }} {{ contact.lastName || "" }}</h1>
         <p>
           {{ contact.roleTitle || contact.relationshipType }}
           <span *ngIf="contact.company"> at {{ contact.company.name }}</span>
@@ -19,49 +19,74 @@
         </div>
         <div class="detail-item">
           <span class="detail-label">Company</span>
-          <a class="detail-value" *ngIf="contact.company; else empty" [routerLink]="['/companies', contact.company.id]">
+          <a
+            class="detail-value"
+            *ngIf="contact.company; else empty"
+            [routerLink]="['/companies', contact.company.id]"
+          >
             {{ contact.company.name }}
           </a>
         </div>
         <div class="detail-item">
           <span class="detail-label">Email</span>
-          <a class="detail-value" *ngIf="contact.email; else empty" [href]="'mailto:' + contact.email">
+          <a
+            class="detail-value"
+            *ngIf="contact.email; else empty"
+            [href]="'mailto:' + contact.email"
+          >
             {{ contact.email }}
           </a>
         </div>
         <div class="detail-item">
           <span class="detail-label">Phone</span>
-          <div class="detail-value">{{ contact.phone || 'Not set' }}</div>
+          <div class="detail-value">{{ contact.phone || "Not set" }}</div>
         </div>
         <div class="detail-item">
           <span class="detail-label">LinkedIn</span>
-          <a class="detail-value" *ngIf="contact.linkedinUrl; else empty" [href]="contact.linkedinUrl" target="_blank">
+          <a
+            class="detail-value"
+            *ngIf="contact.linkedinUrl; else empty"
+            [href]="contact.linkedinUrl"
+            target="_blank"
+          >
             {{ contact.linkedinUrl }}
           </a>
         </div>
         <div class="detail-item">
           <span class="detail-label">Location</span>
-          <div class="detail-value">{{ contact.location || 'Not set' }}</div>
+          <div class="detail-value">{{ contact.location || "Not set" }}</div>
         </div>
         <div class="detail-item">
           <span class="detail-label">Birthday</span>
-          <div class="detail-value">{{ birthday(contact.birthdayMonth, contact.birthdayDay, contact.birthdayYear) }}</div>
+          <div class="detail-value">
+            {{
+              birthday(
+                contact.birthdayMonth,
+                contact.birthdayDay,
+                contact.birthdayYear
+              )
+            }}
+          </div>
         </div>
         <div class="detail-item">
           <span class="detail-label">Source</span>
-          <div class="detail-value">{{ contact.source || 'Not set' }}</div>
+          <div class="detail-value">{{ contact.source || "Not set" }}</div>
         </div>
         <div class="detail-item">
           <span class="detail-label">Last interaction</span>
-          <div class="detail-value">{{ formatDateTime(contact.lastInteractionAt) }}</div>
+          <div class="detail-value">
+            {{ formatDateTime(contact.lastInteractionAt) }}
+          </div>
         </div>
         <div class="detail-item">
           <span class="detail-label">Next follow-up</span>
-          <div class="detail-value">{{ formatDateTime(contact.nextFollowUpAt) }}</div>
+          <div class="detail-value">
+            {{ formatDateTime(contact.nextFollowUpAt) }}
+          </div>
         </div>
         <div class="detail-item is-full">
           <span class="detail-label">Notes</span>
-          <div class="detail-value">{{ contact.notes || 'No notes yet' }}</div>
+          <div class="detail-value">{{ contact.notes || "No notes yet" }}</div>
         </div>
       </div>
     </div>
@@ -73,12 +98,16 @@
       </div>
     </div>
 
-    <ng-container *ngIf="openFollowUp$ | async as openFollowUp; else followUpFormBlock">
+    <ng-container
+      *ngIf="openFollowUp$ | async as openFollowUp; else followUpFormBlock"
+    >
       <div class="detail-panel" *ngIf="contact">
         <div class="detail-grid">
           <div class="detail-item">
             <span class="detail-label">Due</span>
-            <div class="detail-value">{{ formatDateTime(openFollowUp.dueAt) }}</div>
+            <div class="detail-value">
+              {{ formatDateTime(openFollowUp.dueAt) }}
+            </div>
           </div>
           <div class="detail-item">
             <span class="detail-label">Status</span>
@@ -86,17 +115,35 @@
           </div>
           <div class="detail-item is-full">
             <span class="detail-label">Reason</span>
-            <div class="detail-value">{{ openFollowUp.reason || 'No reason recorded' }}</div>
+            <div class="detail-value">
+              {{ openFollowUp.reason || "No reason recorded" }}
+            </div>
           </div>
         </div>
 
-        <p class="notification is-danger is-light" *ngIf="followUpError">{{ followUpError }}</p>
+        <p class="notification is-danger is-light" *ngIf="followUpError">
+          {{ followUpError }}
+        </p>
 
         <div class="toolbar">
-          <button class="button is-link" type="button" [disabled]="completingFollowUpId !== null" (click)="completeFollowUp(openFollowUp.id, contact.id)">
-            {{ completingFollowUpId === openFollowUp.id ? 'Completing...' : 'Complete follow-up' }}
+          <button
+            class="button is-link"
+            type="button"
+            [disabled]="completingFollowUpId !== null"
+            (click)="completeFollowUp(openFollowUp.id, contact.id)"
+          >
+            {{
+              completingFollowUpId === openFollowUp.id
+                ? "Completing..."
+                : "Complete follow-up"
+            }}
           </button>
-          <button class="button is-light" type="button" [disabled]="completingFollowUpId !== null" (click)="cancelFollowUp(openFollowUp.id, contact.id)">
+          <button
+            class="button is-light"
+            type="button"
+            [disabled]="completingFollowUpId !== null"
+            (click)="cancelFollowUp(openFollowUp.id, contact.id)"
+          >
             Cancel follow-up
           </button>
         </div>
@@ -104,23 +151,42 @@
     </ng-container>
 
     <ng-template #followUpFormBlock>
-      <form class="form-panel interaction-form" *ngIf="contact" [formGroup]="followUpForm" (ngSubmit)="submitFollowUp(contact.id)">
+      <form
+        class="form-panel interaction-form"
+        *ngIf="contact"
+        [formGroup]="followUpForm"
+        (ngSubmit)="submitFollowUp(contact.id)"
+      >
         <div class="form-grid">
           <div class="field">
             <label class="label" for="followUpDueAt">Due date and time</label>
             <div class="control">
-              <input class="input" id="followUpDueAt" type="datetime-local" formControlName="dueAt" />
+              <input
+                class="input"
+                id="followUpDueAt"
+                type="datetime-local"
+                formControlName="dueAt"
+              />
             </div>
           </div>
 
           <div class="field">
-            <label class="label" for="followUpInteractionId">Related interaction</label>
+            <label class="label" for="followUpInteractionId"
+              >Related interaction</label
+            >
             <div class="control">
               <div class="select is-fullwidth">
-                <select id="followUpInteractionId" formControlName="interactionId">
+                <select
+                  id="followUpInteractionId"
+                  formControlName="interactionId"
+                >
                   <option value="">No interaction</option>
-                  <option *ngFor="let interaction of interactions$ | async" [value]="interaction.id">
-                    {{ formatDateTime(interaction.occurredAt) }} - {{ interaction.summary }}
+                  <option
+                    *ngFor="let interaction of interactions$ | async"
+                    [value]="interaction.id"
+                  >
+                    {{ formatDateTime(interaction.occurredAt) }} -
+                    {{ interaction.summary }}
                   </option>
                 </select>
               </div>
@@ -130,16 +196,27 @@
           <div class="field is-full">
             <label class="label" for="followUpReason">Reason</label>
             <div class="control">
-              <textarea class="textarea" id="followUpReason" rows="2" formControlName="reason"></textarea>
+              <textarea
+                class="textarea"
+                id="followUpReason"
+                rows="2"
+                formControlName="reason"
+              ></textarea>
             </div>
           </div>
         </div>
 
-        <p class="notification is-danger is-light" *ngIf="followUpError">{{ followUpError }}</p>
+        <p class="notification is-danger is-light" *ngIf="followUpError">
+          {{ followUpError }}
+        </p>
 
         <div class="toolbar">
-          <button class="button is-link" type="submit" [disabled]="followUpForm.invalid || savingFollowUp">
-            {{ savingFollowUp ? 'Saving...' : 'Add follow-up' }}
+          <button
+            class="button is-link"
+            type="submit"
+            [disabled]="followUpForm.invalid || savingFollowUp"
+          >
+            {{ savingFollowUp ? "Saving..." : "Add follow-up" }}
           </button>
         </div>
       </form>
@@ -152,14 +229,21 @@
       </div>
     </div>
 
-    <form class="form-panel interaction-form" *ngIf="contact" [formGroup]="interactionForm" (ngSubmit)="submitInteraction(contact.id)">
+    <form
+      class="form-panel interaction-form"
+      *ngIf="contact"
+      [formGroup]="interactionForm"
+      (ngSubmit)="submitInteraction(contact.id)"
+    >
       <div class="form-grid">
         <div class="field">
           <label class="label" for="interactionType">Type</label>
           <div class="control">
             <div class="select is-fullwidth">
               <select id="interactionType" formControlName="interactionType">
-                <option *ngFor="let type of interactionTypes" [value]="type">{{ type }}</option>
+                <option *ngFor="let type of interactionTypes" [value]="type">
+                  {{ type }}
+                </option>
               </select>
             </div>
           </div>
@@ -168,32 +252,66 @@
         <div class="field">
           <label class="label" for="occurredAt">Date and time</label>
           <div class="control">
-            <input class="input" id="occurredAt" type="datetime-local" formControlName="occurredAt" />
+            <input
+              class="input"
+              id="occurredAt"
+              type="datetime-local"
+              formControlName="occurredAt"
+            />
           </div>
         </div>
 
         <div class="field is-full">
           <label class="label" for="summary">Summary</label>
           <div class="control">
-            <textarea class="textarea" id="summary" rows="3" formControlName="summary"></textarea>
+            <textarea
+              class="textarea"
+              id="summary"
+              rows="3"
+              formControlName="summary"
+            ></textarea>
           </div>
         </div>
 
         <div class="field is-full">
           <label class="label" for="outcome">Outcome</label>
           <div class="control">
-            <textarea class="textarea" id="outcome" rows="2" formControlName="outcome"></textarea>
+            <textarea
+              class="textarea"
+              id="outcome"
+              rows="2"
+              formControlName="outcome"
+            ></textarea>
           </div>
         </div>
       </div>
 
-      <p class="notification is-danger is-light" *ngIf="interactionError">{{ interactionError }}</p>
+      <p class="notification is-danger is-light" *ngIf="interactionError">
+        {{ interactionError }}
+      </p>
 
       <div class="toolbar">
-        <button class="button is-link" type="submit" [disabled]="interactionForm.invalid || savingInteraction">
-          {{ savingInteraction ? 'Saving...' : editingInteractionId ? 'Update interaction' : 'Add interaction' }}
+        <button
+          class="button is-link"
+          type="submit"
+          [disabled]="interactionForm.invalid || savingInteraction"
+        >
+          {{
+            savingInteraction
+              ? "Saving..."
+              : editingInteractionId
+                ? "Update interaction"
+                : "Add interaction"
+          }}
         </button>
-        <button class="button is-light" type="button" *ngIf="editingInteractionId" (click)="cancelEdit()">Cancel edit</button>
+        <button
+          class="button is-light"
+          type="button"
+          *ngIf="editingInteractionId"
+          (click)="cancelEdit()"
+        >
+          Cancel edit
+        </button>
       </div>
     </form>
 
@@ -207,12 +325,22 @@
           <div>
             <div class="timeline-heading">
               <span class="status-pill">{{ interaction.interactionType }}</span>
-              <span class="row-meta">{{ formatDateTime(interaction.occurredAt) }}</span>
+              <span class="row-meta">{{
+                formatDateTime(interaction.occurredAt)
+              }}</span>
             </div>
             <p class="timeline-summary">{{ interaction.summary }}</p>
-            <p class="row-meta" *ngIf="interaction.outcome">{{ interaction.outcome }}</p>
+            <p class="row-meta" *ngIf="interaction.outcome">
+              {{ interaction.outcome }}
+            </p>
           </div>
-          <button class="button is-small is-light" type="button" (click)="editInteraction(interaction)">Edit</button>
+          <button
+            class="button is-small is-light"
+            type="button"
+            (click)="editInteraction(interaction)"
+          >
+            Edit
+          </button>
         </article>
       </div>
     </ng-container>

@@ -16,5 +16,5 @@ export const routes: Routes = [
   { path: 'companies', component: CompanyListComponent },
   { path: 'companies/new', component: CompanyCreateComponent },
   { path: 'companies/:id', component: CompanyDetailComponent },
-  { path: '**', redirectTo: 'contacts' }
+  { path: '**', redirectTo: 'contacts' },
 ];

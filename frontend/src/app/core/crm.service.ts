@@ -14,7 +14,7 @@ import type {
   Dashboard,
   FollowUp,
   Interaction,
-  UpdateInteractionInput
+  UpdateInteractionInput,
 } from './crm.types';
 import type {
   CancelFollowUpMutation,
@@ -41,7 +41,7 @@ import type {
   OpenFollowUpQuery,
   OpenFollowUpQueryVariables,
   UpdateInteractionMutation,
-  UpdateInteractionMutationVariables
+  UpdateInteractionMutationVariables,
 } from './graphql/generated';
 import {
   CancelFollowUpDocument,
@@ -57,7 +57,7 @@ import {
   CreateInteractionDocument,
   DashboardDocument,
   OpenFollowUpDocument,
-  UpdateInteractionDocument
+  UpdateInteractionDocument,
 } from './graphql/generated';
 
 @Injectable({ providedIn: 'root' })
@@ -68,11 +68,11 @@ export class CrmService {
     return this.apollo
       .watchQuery<CompaniesQuery>({
         query: CompaniesDocument,
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.companies)
+        map((result) => result.data.companies),
       );
   }
 
@@ -81,11 +81,11 @@ export class CrmService {
       .watchQuery<CompanyQuery, CompanyQueryVariables>({
         query: CompanyDocument,
         variables: { id },
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.company)
+        map((result) => result.data.company),
       );
   }
 
@@ -93,11 +93,11 @@ export class CrmService {
     return this.apollo
       .watchQuery<ContactsQuery>({
         query: ContactsDocument,
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.contacts)
+        map((result) => result.data.contacts),
       );
   }
 
@@ -106,11 +106,11 @@ export class CrmService {
       .watchQuery<ContactQuery, ContactQueryVariables>({
         query: ContactDocument,
         variables: { id },
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.contact)
+        map((result) => result.data.contact),
       );
   }
 
@@ -119,11 +119,11 @@ export class CrmService {
       .watchQuery<ContactInteractionsQuery, ContactInteractionsQueryVariables>({
         query: ContactInteractionsDocument,
         variables: { contactId },
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.contactInteractions)
+        map((result) => result.data.contactInteractions),
       );
   }
 
@@ -132,11 +132,11 @@ export class CrmService {
       .watchQuery<OpenFollowUpQuery, OpenFollowUpQueryVariables>({
         query: OpenFollowUpDocument,
         variables: { contactId },
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.openFollowUp)
+        map((result) => result.data.openFollowUp),
       );
   }
 
@@ -144,11 +144,11 @@ export class CrmService {
     return this.apollo
       .watchQuery<DashboardQuery>({
         query: DashboardDocument,
-        fetchPolicy: 'cache-and-network'
+        fetchPolicy: 'cache-and-network',
       })
       .valueChanges.pipe(
         onlyCompleteData(),
-        map((result) => result.data.dashboard)
+        map((result) => result.data.dashboard),
       );
   }
 
@@ -157,7 +157,7 @@ export class CrmService {
       .mutate<CreateCompanyMutation, CreateCompanyMutationVariables>({
         mutation: CreateCompanyDocument,
         variables: { input },
-        refetchQueries: [{ query: CompaniesDocument }]
+        refetchQueries: [{ query: CompaniesDocument }],
       })
       .pipe(map((result) => this.requiredData(result.data).createCompany));
   }
@@ -167,7 +167,10 @@ export class CrmService {
       .mutate<CreateContactMutation, CreateContactMutationVariables>({
         mutation: CreateContactDocument,
         variables: { input },
-        refetchQueries: [{ query: ContactsDocument }, { query: CompaniesDocument }]
+        refetchQueries: [
+          { query: ContactsDocument },
+          { query: CompaniesDocument },
+        ],
       })
       .pipe(map((result) => this.requiredData(result.data).createContact));
   }
@@ -179,21 +182,27 @@ export class CrmService {
         variables: { input },
         refetchQueries: [
           { query: ContactDocument, variables: { id: input.contactId } },
-          { query: ContactInteractionsDocument, variables: { contactId: input.contactId } }
-        ]
+          {
+            query: ContactInteractionsDocument,
+            variables: { contactId: input.contactId },
+          },
+        ],
       })
       .pipe(map((result) => this.requiredData(result.data).createInteraction));
   }
 
-  updateInteraction(input: UpdateInteractionInput, contactId: string): Observable<Interaction> {
+  updateInteraction(
+    input: UpdateInteractionInput,
+    contactId: string,
+  ): Observable<Interaction> {
     return this.apollo
       .mutate<UpdateInteractionMutation, UpdateInteractionMutationVariables>({
         mutation: UpdateInteractionDocument,
         variables: { input },
         refetchQueries: [
           { query: ContactDocument, variables: { id: contactId } },
-          { query: ContactInteractionsDocument, variables: { contactId } }
-        ]
+          { query: ContactInteractionsDocument, variables: { contactId } },
+        ],
       })
       .pipe(map((result) => this.requiredData(result.data).updateInteraction));
   }
@@ -203,7 +212,7 @@ export class CrmService {
       .mutate<CreateFollowUpMutation, CreateFollowUpMutationVariables>({
         mutation: CreateFollowUpDocument,
         variables: { input },
-        refetchQueries: this.followUpRefetchQueries(input.contactId)
+        refetchQueries: this.followUpRefetchQueries(input.contactId),
       })
       .pipe(map((result) => this.requiredData(result.data).createFollowUp));
   }
@@ -213,7 +222,7 @@ export class CrmService {
       .mutate<CompleteFollowUpMutation, CompleteFollowUpMutationVariables>({
         mutation: CompleteFollowUpDocument,
         variables: { id },
-        refetchQueries: this.followUpRefetchQueries(contactId)
+        refetchQueries: this.followUpRefetchQueries(contactId),
       })
       .pipe(map((result) => this.requiredData(result.data).completeFollowUp));
   }
@@ -223,7 +232,7 @@ export class CrmService {
       .mutate<CancelFollowUpMutation, CancelFollowUpMutationVariables>({
         mutation: CancelFollowUpDocument,
         variables: { id },
-        refetchQueries: this.followUpRefetchQueries(contactId)
+        refetchQueries: this.followUpRefetchQueries(contactId),
       })
       .pipe(map((result) => this.requiredData(result.data).cancelFollowUp));
   }
@@ -232,7 +241,7 @@ export class CrmService {
     return [
       { query: ContactDocument, variables: { id: contactId } },
       { query: OpenFollowUpDocument, variables: { contactId } },
-      { query: DashboardDocument }
+      { query: DashboardDocument },
     ];
   }
 

@@ -30,21 +30,36 @@ function required(control: AbstractControl): ValidationErrors | null {
           <div class="field">
             <label class="label" for="firstName">First name</label>
             <div class="control">
-              <input class="input" id="firstName" type="text" formControlName="firstName" />
+              <input
+                class="input"
+                id="firstName"
+                type="text"
+                formControlName="firstName"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="lastName">Last name</label>
             <div class="control">
-              <input class="input" id="lastName" type="text" formControlName="lastName" />
+              <input
+                class="input"
+                id="lastName"
+                type="text"
+                formControlName="lastName"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="preferredName">Preferred name</label>
             <div class="control">
-              <input class="input" id="preferredName" type="text" formControlName="preferredName" />
+              <input
+                class="input"
+                id="preferredName"
+                type="text"
+                formControlName="preferredName"
+              />
             </div>
           </div>
 
@@ -54,7 +69,12 @@ function required(control: AbstractControl): ValidationErrors | null {
               <div class="select is-fullwidth">
                 <select id="companyId" formControlName="companyId">
                   <option value="">No company</option>
-                  <option *ngFor="let company of companies$ | async" [value]="company.id">{{ company.name }}</option>
+                  <option
+                    *ngFor="let company of companies$ | async"
+                    [value]="company.id"
+                  >
+                    {{ company.name }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -64,8 +84,13 @@ function required(control: AbstractControl): ValidationErrors | null {
             <label class="label" for="relationshipType">Relationship</label>
             <div class="control">
               <div class="select is-fullwidth">
-                <select id="relationshipType" formControlName="relationshipType">
-                  <option *ngFor="let type of relationshipTypes" [value]="type">{{ type }}</option>
+                <select
+                  id="relationshipType"
+                  formControlName="relationshipType"
+                >
+                  <option *ngFor="let type of relationshipTypes" [value]="type">
+                    {{ type }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -76,7 +101,9 @@ function required(control: AbstractControl): ValidationErrors | null {
             <div class="control">
               <div class="select is-fullwidth">
                 <select id="status" formControlName="status">
-                  <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+                  <option *ngFor="let status of statuses" [value]="status">
+                    {{ status }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -85,71 +112,128 @@ function required(control: AbstractControl): ValidationErrors | null {
           <div class="field">
             <label class="label" for="roleTitle">Role/title</label>
             <div class="control">
-              <input class="input" id="roleTitle" type="text" formControlName="roleTitle" />
+              <input
+                class="input"
+                id="roleTitle"
+                type="text"
+                formControlName="roleTitle"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="location">Location</label>
             <div class="control">
-              <input class="input" id="location" type="text" formControlName="location" />
+              <input
+                class="input"
+                id="location"
+                type="text"
+                formControlName="location"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="email">Email</label>
             <div class="control">
-              <input class="input" id="email" type="email" formControlName="email" />
+              <input
+                class="input"
+                id="email"
+                type="email"
+                formControlName="email"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="phone">Phone</label>
             <div class="control">
-              <input class="input" id="phone" type="tel" formControlName="phone" />
+              <input
+                class="input"
+                id="phone"
+                type="tel"
+                formControlName="phone"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="linkedinUrl">LinkedIn</label>
             <div class="control">
-              <input class="input" id="linkedinUrl" type="url" formControlName="linkedinUrl" />
+              <input
+                class="input"
+                id="linkedinUrl"
+                type="url"
+                formControlName="linkedinUrl"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="source">Source</label>
             <div class="control">
-              <input class="input" id="source" type="text" formControlName="source" />
+              <input
+                class="input"
+                id="source"
+                type="text"
+                formControlName="source"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="birthdayMonth">Birthday month</label>
             <div class="control">
-              <input class="input" id="birthdayMonth" type="number" min="1" max="12" formControlName="birthdayMonth" />
+              <input
+                class="input"
+                id="birthdayMonth"
+                type="number"
+                min="1"
+                max="12"
+                formControlName="birthdayMonth"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="birthdayDay">Birthday day</label>
             <div class="control">
-              <input class="input" id="birthdayDay" type="number" min="1" max="31" formControlName="birthdayDay" />
+              <input
+                class="input"
+                id="birthdayDay"
+                type="number"
+                min="1"
+                max="31"
+                formControlName="birthdayDay"
+              />
             </div>
           </div>
 
           <div class="field">
             <label class="label" for="birthdayYear">Birthday year</label>
             <div class="control">
-              <input class="input" id="birthdayYear" type="number" min="1900" formControlName="birthdayYear" />
+              <input
+                class="input"
+                id="birthdayYear"
+                type="number"
+                min="1900"
+                formControlName="birthdayYear"
+              />
             </div>
-            <p class="field-hint">Only include a year when month and day are set.</p>
+            <p class="field-hint">
+              Only include a year when month and day are set.
+            </p>
           </div>
 
           <div class="field is-full">
             <label class="label" for="notes">Notes</label>
             <div class="control">
-              <textarea class="textarea" id="notes" rows="4" formControlName="notes"></textarea>
+              <textarea
+                class="textarea"
+                id="notes"
+                rows="4"
+                formControlName="notes"
+              ></textarea>
             </div>
           </div>
         </div>
@@ -157,14 +241,18 @@ function required(control: AbstractControl): ValidationErrors | null {
         <p class="notification is-danger is-light" *ngIf="error">{{ error }}</p>
 
         <div class="toolbar">
-          <button class="button is-link" type="submit" [disabled]="form.invalid || saving">
+          <button
+            class="button is-link"
+            type="submit"
+            [disabled]="form.invalid || saving"
+          >
             {{ saving ? 'Saving...' : 'Create contact' }}
           </button>
           <a class="button is-light" routerLink="/contacts">Cancel</a>
         </div>
       </form>
     </section>
-  `
+  `,
 })
 export class ContactCreateComponent {
   private readonly fb = inject(FormBuilder);
@@ -184,7 +272,7 @@ export class ContactCreateComponent {
     'RECRUITER',
     'MENTOR',
     'COMMUNITY',
-    'OTHER'
+    'OTHER',
   ];
   readonly statuses: ContactStatus[] = [
     'NEW',
@@ -194,7 +282,7 @@ export class ContactCreateComponent {
     'ACTIVE',
     'DORMANT',
     'PAUSED',
-    'DO_NOT_CONTACT'
+    'DO_NOT_CONTACT',
   ];
 
   readonly form = this.fb.nonNullable.group({
@@ -207,13 +295,16 @@ export class ContactCreateComponent {
     linkedinUrl: [''],
     email: [''],
     phone: [''],
-    relationshipType: this.fb.nonNullable.control<RelationshipType>('PROFESSIONAL', { validators: [required] }),
+    relationshipType: this.fb.nonNullable.control<RelationshipType>(
+      'PROFESSIONAL',
+      { validators: [required] },
+    ),
     status: this.fb.nonNullable.control<ContactStatus>('NEW'),
     source: [''],
     notes: [''],
     birthdayMonth: [''],
     birthdayDay: [''],
-    birthdayYear: ['']
+    birthdayYear: [''],
   });
 
   constructor() {
@@ -249,14 +340,15 @@ export class ContactCreateComponent {
         notes: blankToNull(value.notes),
         birthdayMonth: numberOrNull(value.birthdayMonth),
         birthdayDay: numberOrNull(value.birthdayDay),
-        birthdayYear: numberOrNull(value.birthdayYear)
+        birthdayYear: numberOrNull(value.birthdayYear),
       })
       .subscribe({
         next: (contact) => void this.router.navigate(['/contacts', contact.id]),
         error: () => {
-          this.error = 'Contact could not be created. Check required fields, email uniqueness, and birthday values.';
+          this.error =
+            'Contact could not be created. Check required fields, email uniqueness, and birthday values.';
           this.saving = false;
-        }
+        },
       });
   }
 }

@@ -18,8 +18,8 @@ export const appConfig: ApplicationConfig = {
 
       return {
         cache: new InMemoryCache(),
-        link: httpLink.create({ uri: '/graphql' })
+        link: httpLink.create({ uri: '/graphql' }),
       };
-    })
-  ]
+    }),
+  ],
 };

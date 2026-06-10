@@ -12,10 +12,10 @@ const config: CodegenConfig = {
         inputMaybeValue: 'T | null',
         enumsAsTypes: true,
         preResolveTypes: false,
-        documentMode: 'documentNode'
-      }
-    }
-  }
+        documentMode: 'documentNode',
+      },
+    },
+  },
 };
 
 export default config;

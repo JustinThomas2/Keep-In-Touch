@@ -6,9 +6,8 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class HealthQueryController {
 
-	@QueryMapping
-	public String health() {
-		return "OK";
-	}
-
+  @QueryMapping
+  public String health() {
+    return "OK";
+  }
 }

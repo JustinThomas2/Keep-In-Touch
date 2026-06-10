@@ -6,6 +6,8 @@
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
     "codegen": "graphql-codegen --config codegen.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "ng lint",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -50,6 +52,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "prettier": "^3.8.4",
     "typescript": "~5.7.2"
   }
 }
