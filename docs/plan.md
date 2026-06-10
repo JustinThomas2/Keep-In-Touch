@@ -1029,7 +1029,6 @@ Possible tests:
 
 ### CI Tasks
 
-- Add GitHub Actions workflow.
 - Run backend tests.
 - Build frontend.
 - Optionally run frontend tests if configured.
@@ -1046,7 +1045,6 @@ User should review:
 
 - Backend tests pass locally.
 - Frontend builds locally.
-- GitHub Actions runs successfully.
 
 ## Phase 10: Polish and MVP Review
 
