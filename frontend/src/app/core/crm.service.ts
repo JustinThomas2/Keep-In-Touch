@@ -9,12 +9,19 @@ import type {
   Contact,
   CreateCompanyInput,
   CreateContactInput,
+  CreateFollowUpInput,
   CreateInteractionInput,
+  Dashboard,
+  FollowUp,
   Interaction,
   UpdateInteractionInput
 } from './crm.types';
 import type {
+  CancelFollowUpMutation,
+  CancelFollowUpMutationVariables,
   CompaniesQuery,
+  CompleteFollowUpMutation,
+  CompleteFollowUpMutationVariables,
   CompanyQuery,
   CompanyQueryVariables,
   ContactInteractionsQuery,
@@ -26,20 +33,30 @@ import type {
   CreateCompanyMutationVariables,
   CreateContactMutation,
   CreateContactMutationVariables,
+  CreateFollowUpMutation,
+  CreateFollowUpMutationVariables,
   CreateInteractionMutation,
   CreateInteractionMutationVariables,
+  DashboardQuery,
+  OpenFollowUpQuery,
+  OpenFollowUpQueryVariables,
   UpdateInteractionMutation,
   UpdateInteractionMutationVariables
 } from './graphql/generated';
 import {
+  CancelFollowUpDocument,
   CompaniesDocument,
+  CompleteFollowUpDocument,
   CompanyDocument,
   ContactDocument,
   ContactInteractionsDocument,
   ContactsDocument,
   CreateCompanyDocument,
   CreateContactDocument,
+  CreateFollowUpDocument,
   CreateInteractionDocument,
+  DashboardDocument,
+  OpenFollowUpDocument,
   UpdateInteractionDocument
 } from './graphql/generated';
 
@@ -110,6 +127,31 @@ export class CrmService {
       );
   }
 
+  openFollowUp(contactId: string): Observable<FollowUp | null> {
+    return this.apollo
+      .watchQuery<OpenFollowUpQuery, OpenFollowUpQueryVariables>({
+        query: OpenFollowUpDocument,
+        variables: { contactId },
+        fetchPolicy: 'cache-and-network'
+      })
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.openFollowUp)
+      );
+  }
+
+  dashboard(): Observable<Dashboard> {
+    return this.apollo
+      .watchQuery<DashboardQuery>({
+        query: DashboardDocument,
+        fetchPolicy: 'cache-and-network'
+      })
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.dashboard)
+      );
+  }
+
   createCompany(input: CreateCompanyInput): Observable<Company> {
     return this.apollo
       .mutate<CreateCompanyMutation, CreateCompanyMutationVariables>({
@@ -154,6 +196,44 @@ export class CrmService {
         ]
       })
       .pipe(map((result) => this.requiredData(result.data).updateInteraction));
+  }
+
+  createFollowUp(input: CreateFollowUpInput): Observable<FollowUp> {
+    return this.apollo
+      .mutate<CreateFollowUpMutation, CreateFollowUpMutationVariables>({
+        mutation: CreateFollowUpDocument,
+        variables: { input },
+        refetchQueries: this.followUpRefetchQueries(input.contactId)
+      })
+      .pipe(map((result) => this.requiredData(result.data).createFollowUp));
+  }
+
+  completeFollowUp(id: string, contactId: string): Observable<FollowUp> {
+    return this.apollo
+      .mutate<CompleteFollowUpMutation, CompleteFollowUpMutationVariables>({
+        mutation: CompleteFollowUpDocument,
+        variables: { id },
+        refetchQueries: this.followUpRefetchQueries(contactId)
+      })
+      .pipe(map((result) => this.requiredData(result.data).completeFollowUp));
+  }
+
+  cancelFollowUp(id: string, contactId: string): Observable<FollowUp> {
+    return this.apollo
+      .mutate<CancelFollowUpMutation, CancelFollowUpMutationVariables>({
+        mutation: CancelFollowUpDocument,
+        variables: { id },
+        refetchQueries: this.followUpRefetchQueries(contactId)
+      })
+      .pipe(map((result) => this.requiredData(result.data).cancelFollowUp));
+  }
+
+  private followUpRefetchQueries(contactId: string) {
+    return [
+      { query: ContactDocument, variables: { id: contactId } },
+      { query: OpenFollowUpDocument, variables: { contactId } },
+      { query: DashboardDocument }
+    ];
   }
 
   private requiredData<T>(data: T | null | undefined): T {

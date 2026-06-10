@@ -24,7 +24,10 @@ export class ContactDetailComponent {
   private readonly fb = inject(FormBuilder);
 
   interactionError = '';
+  followUpError = '';
   savingInteraction = false;
+  savingFollowUp = false;
+  completingFollowUpId: string | null = null;
   editingInteractionId: string | null = null;
 
   readonly interactionTypes: InteractionType[] = [
@@ -45,6 +48,12 @@ export class ContactDetailComponent {
     outcome: ['']
   });
 
+  readonly followUpForm = this.fb.nonNullable.group({
+    dueAt: [this.toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)), required],
+    interactionId: [''],
+    reason: ['']
+  });
+
   private readonly contactId$ = this.route.paramMap.pipe(
     map((params) => params.get('id') ?? ''),
     shareReplay({ bufferSize: 1, refCount: true })
@@ -56,6 +65,10 @@ export class ContactDetailComponent {
 
   readonly interactions$ = this.contactId$.pipe(
     switchMap((contactId) => this.crm.contactInteractions(contactId))
+  );
+
+  readonly openFollowUp$ = this.contactId$.pipe(
+    switchMap((contactId) => this.crm.openFollowUp(contactId))
   );
 
   birthday(month: number | null, day: number | null, year: number | null): string {
@@ -139,12 +152,91 @@ export class ContactDetailComponent {
     });
   }
 
+  submitFollowUp(contactId: string): void {
+    if (this.followUpForm.invalid || this.savingFollowUp) {
+      return;
+    }
+
+    this.followUpError = '';
+    this.savingFollowUp = true;
+    const value = this.followUpForm.getRawValue();
+    let dueAt: string;
+    try {
+      dueAt = this.toIsoDateTime(value.dueAt, 'Follow-up date/time is invalid.');
+    }
+    catch {
+      this.followUpError = 'Follow-up could not be saved. Check required fields and date/time.';
+      this.savingFollowUp = false;
+      return;
+    }
+
+    this.crm.createFollowUp({
+      contactId,
+      interactionId: blankToNull(value.interactionId),
+      dueAt,
+      reason: blankToNull(value.reason)
+    }).subscribe({
+      next: () => {
+        this.savingFollowUp = false;
+        this.resetFollowUpForm();
+      },
+      error: () => {
+        this.followUpError = 'Follow-up could not be saved. This contact may already have an open follow-up.';
+        this.savingFollowUp = false;
+      }
+    });
+  }
+
+  completeFollowUp(id: string, contactId: string): void {
+    if (this.completingFollowUpId !== null) {
+      return;
+    }
+
+    this.followUpError = '';
+    this.completingFollowUpId = id;
+    this.crm.completeFollowUp(id, contactId).subscribe({
+      next: () => {
+        this.completingFollowUpId = null;
+      },
+      error: () => {
+        this.followUpError = 'Follow-up could not be completed.';
+        this.completingFollowUpId = null;
+      }
+    });
+  }
+
+  cancelFollowUp(id: string, contactId: string): void {
+    if (this.completingFollowUpId !== null) {
+      return;
+    }
+
+    this.followUpError = '';
+    this.completingFollowUpId = id;
+    this.crm.cancelFollowUp(id, contactId).subscribe({
+      next: () => {
+        this.completingFollowUpId = null;
+      },
+      error: () => {
+        this.followUpError = 'Follow-up could not be cancelled.';
+        this.completingFollowUpId = null;
+      }
+    });
+  }
+
   private resetInteractionForm(): void {
     this.interactionForm.setValue({
       interactionType: 'EMAIL',
       occurredAt: this.toDateTimeLocal(new Date()),
       summary: '',
       outcome: ''
+    });
+  }
+
+  private resetFollowUpForm(): void {
+    this.followUpForm.setValue({
+      dueAt: this.toDateTimeLocal(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      interactionId: '',
+      reason: ''
     });
   }
 
@@ -157,10 +249,10 @@ export class ContactDetailComponent {
     return localTime.toISOString().slice(0, 16);
   }
 
-  private toIsoDateTime(value: string): string {
+  private toIsoDateTime(value: string, message = 'Interaction date/time is invalid.'): string {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-      throw new Error('Interaction date/time is invalid.');
+      throw new Error(message);
     }
 
     return date.toISOString();

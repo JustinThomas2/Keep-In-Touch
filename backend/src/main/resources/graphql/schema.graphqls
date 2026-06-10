@@ -31,6 +31,12 @@ enum InteractionType {
   OTHER
 }
 
+enum FollowUpStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
 type Query {
   health: String!
   companies: [Company!]!
@@ -38,6 +44,8 @@ type Query {
   contacts: [Contact!]!
   contact(id: ID!): Contact
   contactInteractions(contactId: ID!): [Interaction!]!
+  openFollowUp(contactId: ID!): FollowUp
+  dashboard: Dashboard!
 }
 
 type Mutation {
@@ -47,6 +55,9 @@ type Mutation {
   updateContact(input: UpdateContactInput!): Contact!
   createInteraction(input: CreateInteractionInput!): Interaction!
   updateInteraction(input: UpdateInteractionInput!): Interaction!
+  createFollowUp(input: CreateFollowUpInput!): FollowUp!
+  completeFollowUp(id: ID!): FollowUp!
+  cancelFollowUp(id: ID!): FollowUp!
 }
 
 type Company {
@@ -94,6 +105,24 @@ type Interaction {
   outcome: String
   createdAt: String
   updatedAt: String
+}
+
+type FollowUp {
+  id: ID!
+  contactId: ID!
+  interactionId: ID
+  dueAt: String!
+  status: FollowUpStatus!
+  reason: String
+  completedAt: String
+  createdAt: String
+  updatedAt: String
+  contact: Contact!
+}
+
+type Dashboard {
+  dueFollowUps: [FollowUp!]!
+  overdueFollowUps: [FollowUp!]!
 }
 
 input CreateCompanyInput {
@@ -166,4 +195,11 @@ input UpdateInteractionInput {
   occurredAt: String!
   summary: String!
   outcome: String
+}
+
+input CreateFollowUpInput {
+  contactId: ID!
+  interactionId: ID
+  dueAt: String!
+  reason: String
 }

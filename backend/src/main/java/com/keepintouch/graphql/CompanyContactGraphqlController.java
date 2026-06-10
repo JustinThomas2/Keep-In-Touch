@@ -12,6 +12,8 @@ import org.springframework.stereotype.Controller;
 import com.keepintouch.domain.Company;
 import com.keepintouch.domain.Contact;
 import com.keepintouch.domain.ContactStatus;
+import com.keepintouch.domain.FollowUp;
+import com.keepintouch.domain.FollowUpStatus;
 import com.keepintouch.domain.Interaction;
 import com.keepintouch.domain.InteractionType;
 import com.keepintouch.domain.RelationshipType;
@@ -20,6 +22,7 @@ import com.keepintouch.repository.ContactRepository;
 import com.keepintouch.service.CompanyService;
 import com.keepintouch.service.ContactService;
 import com.keepintouch.service.CurrentUserService;
+import com.keepintouch.service.FollowUpService;
 import com.keepintouch.service.InteractionService;
 
 @Controller
@@ -35,17 +38,21 @@ public class CompanyContactGraphqlController {
 
 	private final InteractionService interactionService;
 
+	private final FollowUpService followUpService;
+
 	public CompanyContactGraphqlController(
 			CurrentUserService currentUserService,
 			CompanyService companyService,
 			ContactService contactService,
 			ContactRepository contactRepository,
-			InteractionService interactionService) {
+			InteractionService interactionService,
+			FollowUpService followUpService) {
 		this.currentUserService = currentUserService;
 		this.companyService = companyService;
 		this.contactService = contactService;
 		this.contactRepository = contactRepository;
 		this.interactionService = interactionService;
+		this.followUpService = followUpService;
 	}
 
 	@QueryMapping
@@ -89,6 +96,27 @@ public class CompanyContactGraphqlController {
 		return interactionService.findByContactId(contactId).stream()
 				.map(this::toInteractionPayload)
 				.toList();
+	}
+
+	@QueryMapping
+	public FollowUpPayload openFollowUp(@Argument UUID contactId) {
+		User user = currentUserService.getCurrentUser();
+		return followUpService.findOpenByContactIdAndUserId(contactId, user.getId())
+				.map(this::toFollowUpPayload)
+				.orElse(null);
+	}
+
+	@QueryMapping
+	public DashboardPayload dashboard() {
+		User user = currentUserService.getCurrentUser();
+		OffsetDateTime now = OffsetDateTime.now();
+		return new DashboardPayload(
+				followUpService.findDueByUserId(user.getId(), now).stream()
+						.map(this::toFollowUpPayload)
+						.toList(),
+				followUpService.findOverdueByUserId(user.getId(), now).stream()
+						.map(this::toFollowUpPayload)
+						.toList());
 	}
 
 	@MutationMapping
@@ -135,6 +163,25 @@ public class CompanyContactGraphqlController {
 		User user = currentUserService.getCurrentUser();
 		return toInteractionPayload(interactionService.update(user.getId(), input.id(), input.interactionType(),
 				parse(input.occurredAt()), input.summary(), input.outcome()));
+	}
+
+	@MutationMapping
+	public FollowUpPayload createFollowUp(@Argument CreateFollowUpInput input) {
+		User user = currentUserService.getCurrentUser();
+		return toFollowUpPayload(followUpService.create(user.getId(), input.contactId(), input.interactionId(),
+				parse(input.dueAt()), input.reason()));
+	}
+
+	@MutationMapping
+	public FollowUpPayload completeFollowUp(@Argument UUID id) {
+		User user = currentUserService.getCurrentUser();
+		return toFollowUpPayload(followUpService.complete(user.getId(), id));
+	}
+
+	@MutationMapping
+	public FollowUpPayload cancelFollowUp(@Argument UUID id) {
+		User user = currentUserService.getCurrentUser();
+		return toFollowUpPayload(followUpService.cancel(user.getId(), id));
 	}
 
 	private CompanyPayload toCompanyPayload(Company company, boolean includeContacts) {
@@ -199,6 +246,20 @@ public class CompanyContactGraphqlController {
 				format(interaction.getUpdatedAt()));
 	}
 
+	private FollowUpPayload toFollowUpPayload(FollowUp followUp) {
+		return new FollowUpPayload(
+				followUp.getId(),
+				followUp.getContact().getId(),
+				followUp.getInteractionId(),
+				format(followUp.getDueAt()),
+				followUp.getStatus(),
+				followUp.getReason(),
+				format(followUp.getCompletedAt()),
+				format(followUp.getCreatedAt()),
+				format(followUp.getUpdatedAt()),
+				toContactPayload(followUp.getContact(), true));
+	}
+
 	private static OffsetDateTime parse(String value) {
 		return value == null ? null : OffsetDateTime.parse(value);
 	}
@@ -256,6 +317,24 @@ public class CompanyContactGraphqlController {
 			String outcome,
 			String createdAt,
 			String updatedAt) {
+	}
+
+	public record FollowUpPayload(
+			UUID id,
+			UUID contactId,
+			UUID interactionId,
+			String dueAt,
+			FollowUpStatus status,
+			String reason,
+			String completedAt,
+			String createdAt,
+			String updatedAt,
+			ContactPayload contact) {
+	}
+
+	public record DashboardPayload(
+			List<FollowUpPayload> dueFollowUps,
+			List<FollowUpPayload> overdueFollowUps) {
 	}
 
 	public record CreateCompanyInput(
@@ -328,5 +407,12 @@ public class CompanyContactGraphqlController {
 			String occurredAt,
 			String summary,
 			String outcome) {
+	}
+
+	public record CreateFollowUpInput(
+			UUID contactId,
+			UUID interactionId,
+			String dueAt,
+			String reason) {
 	}
 }

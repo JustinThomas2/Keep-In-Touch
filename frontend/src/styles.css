@@ -164,6 +164,12 @@ body {
   margin: 0.6rem 0 0.25rem;
 }
 
+.dashboard-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 760px) {
   .page-header,
   .list-row,
@@ -178,7 +184,8 @@ body {
   }
 
   .detail-grid,
-  .form-grid {
+  .form-grid,
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }

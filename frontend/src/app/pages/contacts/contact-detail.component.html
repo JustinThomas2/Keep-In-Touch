@@ -55,12 +55,95 @@
           <span class="detail-label">Last interaction</span>
           <div class="detail-value">{{ formatDateTime(contact.lastInteractionAt) }}</div>
         </div>
+        <div class="detail-item">
+          <span class="detail-label">Next follow-up</span>
+          <div class="detail-value">{{ formatDateTime(contact.nextFollowUpAt) }}</div>
+        </div>
         <div class="detail-item is-full">
           <span class="detail-label">Notes</span>
           <div class="detail-value">{{ contact.notes || 'No notes yet' }}</div>
         </div>
       </div>
     </div>
+
+    <div class="page-header related-header" *ngIf="contact">
+      <div>
+        <h2 class="title is-4">Follow-up</h2>
+        <p>One open next action for this contact.</p>
+      </div>
+    </div>
+
+    <ng-container *ngIf="openFollowUp$ | async as openFollowUp; else followUpFormBlock">
+      <div class="detail-panel" *ngIf="contact">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-label">Due</span>
+            <div class="detail-value">{{ formatDateTime(openFollowUp.dueAt) }}</div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Status</span>
+            <span class="status-pill">{{ openFollowUp.status }}</span>
+          </div>
+          <div class="detail-item is-full">
+            <span class="detail-label">Reason</span>
+            <div class="detail-value">{{ openFollowUp.reason || 'No reason recorded' }}</div>
+          </div>
+        </div>
+
+        <p class="notification is-danger is-light" *ngIf="followUpError">{{ followUpError }}</p>
+
+        <div class="toolbar">
+          <button class="button is-link" type="button" [disabled]="completingFollowUpId !== null" (click)="completeFollowUp(openFollowUp.id, contact.id)">
+            {{ completingFollowUpId === openFollowUp.id ? 'Completing...' : 'Complete follow-up' }}
+          </button>
+          <button class="button is-light" type="button" [disabled]="completingFollowUpId !== null" (click)="cancelFollowUp(openFollowUp.id, contact.id)">
+            Cancel follow-up
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-template #followUpFormBlock>
+      <form class="form-panel interaction-form" *ngIf="contact" [formGroup]="followUpForm" (ngSubmit)="submitFollowUp(contact.id)">
+        <div class="form-grid">
+          <div class="field">
+            <label class="label" for="followUpDueAt">Due date and time</label>
+            <div class="control">
+              <input class="input" id="followUpDueAt" type="datetime-local" formControlName="dueAt" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="followUpInteractionId">Related interaction</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select id="followUpInteractionId" formControlName="interactionId">
+                  <option value="">No interaction</option>
+                  <option *ngFor="let interaction of interactions$ | async" [value]="interaction.id">
+                    {{ formatDateTime(interaction.occurredAt) }} - {{ interaction.summary }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field is-full">
+            <label class="label" for="followUpReason">Reason</label>
+            <div class="control">
+              <textarea class="textarea" id="followUpReason" rows="2" formControlName="reason"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <p class="notification is-danger is-light" *ngIf="followUpError">{{ followUpError }}</p>
+
+        <div class="toolbar">
+          <button class="button is-link" type="submit" [disabled]="followUpForm.invalid || savingFollowUp">
+            {{ savingFollowUp ? 'Saving...' : 'Add follow-up' }}
+          </button>
+        </div>
+      </form>
+    </ng-template>
 
     <div class="page-header related-header" *ngIf="contact">
       <div>

@@ -2,6 +2,7 @@ package com.keepintouch.graphql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -309,6 +310,247 @@ class CompanyContactGraphqlControllerTests {
 				.path("contact.lastInteractionAt")
 				.entity(String.class)
 				.isEqualTo("2026-01-01T14:00Z");
+	}
+
+	@Test
+	void createsCompletesAndShowsFollowUpsThroughGraphql() {
+		String suffix = UUID.randomUUID().toString();
+		String contactId = createContact("Follow Up " + suffix, "follow-up-" + suffix + "@example.com");
+		String overdueAt = OffsetDateTime.now().minusDays(1).withNano(0).toString();
+
+		Map<String, Object> interactionInput = new HashMap<>();
+		interactionInput.put("contactId", contactId);
+		interactionInput.put("interactionType", "EMAIL");
+		interactionInput.put("occurredAt", OffsetDateTime.now().minusDays(2).withNano(0).toString());
+		interactionInput.put("summary", "Discussed a follow-up.");
+
+		String interactionId = graphQlTester.document("""
+				mutation($input: CreateInteractionInput!) {
+				  createInteraction(input: $input) {
+				    id
+				  }
+				}
+				""")
+				.variable("input", interactionInput)
+				.execute()
+				.path("createInteraction.id")
+				.entity(String.class)
+				.get();
+
+		Map<String, Object> followUpInput = new HashMap<>();
+		followUpInput.put("contactId", contactId);
+		followUpInput.put("interactionId", interactionId);
+		followUpInput.put("dueAt", overdueAt);
+		followUpInput.put("reason", "Send the promised note.");
+
+		String followUpId = graphQlTester.document("""
+				mutation($input: CreateFollowUpInput!) {
+				  createFollowUp(input: $input) {
+				    id
+				    contactId
+				    interactionId
+				    dueAt
+				    status
+				    reason
+				    contact {
+				      id
+				      firstName
+				    }
+				  }
+				}
+				""")
+				.variable("input", followUpInput)
+				.execute()
+				.path("createFollowUp.contactId")
+				.entity(String.class)
+				.isEqualTo(contactId)
+				.path("createFollowUp.interactionId")
+				.entity(String.class)
+				.isEqualTo(interactionId)
+				.path("createFollowUp.status")
+				.entity(String.class)
+				.isEqualTo("OPEN")
+				.path("createFollowUp.reason")
+				.entity(String.class)
+				.isEqualTo("Send the promised note.")
+				.path("createFollowUp.id")
+				.entity(String.class)
+				.get();
+
+		graphQlTester.document("""
+				query($id: ID!) {
+				  contact(id: $id) {
+				    nextFollowUpAt
+				  }
+				}
+				""")
+				.variable("id", contactId)
+					.execute()
+					.path("contact.nextFollowUpAt")
+					.entity(String.class)
+					.satisfies(nextFollowUpAt -> assertThat(OffsetDateTime.parse(nextFollowUpAt).toInstant())
+							.isEqualTo(OffsetDateTime.parse(overdueAt).toInstant()));
+
+		graphQlTester.document("""
+				mutation($input: CreateFollowUpInput!) {
+				  createFollowUp(input: $input) {
+				    id
+				  }
+				}
+				""")
+				.variable("input", followUpInput)
+				.execute()
+				.errors()
+				.satisfy(errors -> assertThat(errors).isNotEmpty());
+
+		graphQlTester.document("""
+				query {
+				  dashboard {
+				    overdueFollowUps {
+				      id
+				      contact {
+				        id
+				      }
+				    }
+				    dueFollowUps {
+				      id
+				    }
+				  }
+				}
+				""")
+				.execute()
+				.path("dashboard.overdueFollowUps")
+				.entityList(Map.class)
+				.satisfies(followUps -> assertThat(followUps)
+						.anySatisfy(followUp -> {
+							assertThat(followUp.get("id")).isEqualTo(followUpId);
+							assertThat(((Map<?, ?>) followUp.get("contact")).get("id")).isEqualTo(contactId);
+						}));
+
+		graphQlTester.document("""
+				mutation($id: ID!) {
+				  completeFollowUp(id: $id) {
+				    id
+				    status
+				    completedAt
+				  }
+				}
+				""")
+				.variable("id", followUpId)
+				.execute()
+				.path("completeFollowUp.status")
+				.entity(String.class)
+				.isEqualTo("COMPLETED")
+				.path("completeFollowUp.completedAt")
+				.entity(String.class)
+				.satisfies(completedAt -> assertThat(completedAt).isNotBlank());
+
+		graphQlTester.document("""
+				query($id: ID!) {
+				  contact(id: $id) {
+				    nextFollowUpAt
+				  }
+				}
+				""")
+				.variable("id", contactId)
+				.execute()
+				.path("contact.nextFollowUpAt")
+				.valueIsNull();
+	}
+
+	@Test
+	void showsDueFollowUpsOnDashboard() {
+		String suffix = UUID.randomUUID().toString();
+		String contactId = createContact("Due Follow Up " + suffix, "due-follow-up-" + suffix + "@example.com");
+		String dueAt = OffsetDateTime.now().plusHours(2).withNano(0).toString();
+
+		Map<String, Object> followUpInput = new HashMap<>();
+		followUpInput.put("contactId", contactId);
+		followUpInput.put("dueAt", dueAt);
+		followUpInput.put("reason", "Check in today.");
+
+		String followUpId = graphQlTester.document("""
+				mutation($input: CreateFollowUpInput!) {
+				  createFollowUp(input: $input) {
+				    id
+				  }
+				}
+				""")
+				.variable("input", followUpInput)
+				.execute()
+				.path("createFollowUp.id")
+				.entity(String.class)
+				.get();
+
+		graphQlTester.document("""
+				query {
+				  dashboard {
+				    dueFollowUps {
+				      id
+				      dueAt
+				      reason
+				    }
+				  }
+				}
+				""")
+				.execute()
+				.path("dashboard.dueFollowUps")
+				.entityList(Map.class)
+				.satisfies(followUps -> assertThat(followUps)
+						.anySatisfy(followUp -> {
+							assertThat(followUp.get("id")).isEqualTo(followUpId);
+							assertThat(followUp.get("reason")).isEqualTo("Check in today.");
+							}));
+	}
+
+	@Test
+	void cannotCancelCompletedFollowUp() {
+		String suffix = UUID.randomUUID().toString();
+		String contactId = createContact("Completed Follow Up " + suffix, "completed-follow-up-" + suffix + "@example.com");
+		String dueAt = OffsetDateTime.now().plusHours(2).withNano(0).toString();
+
+		Map<String, Object> followUpInput = new HashMap<>();
+		followUpInput.put("contactId", contactId);
+		followUpInput.put("dueAt", dueAt);
+
+		String followUpId = graphQlTester.document("""
+				mutation($input: CreateFollowUpInput!) {
+				  createFollowUp(input: $input) {
+				    id
+				  }
+				}
+				""")
+				.variable("input", followUpInput)
+				.execute()
+				.path("createFollowUp.id")
+				.entity(String.class)
+				.get();
+
+		graphQlTester.document("""
+				mutation($id: ID!) {
+				  completeFollowUp(id: $id) {
+				    id
+				    status
+				  }
+				}
+				""")
+				.variable("id", followUpId)
+				.execute()
+				.path("completeFollowUp.status")
+				.entity(String.class)
+				.isEqualTo("COMPLETED");
+
+		graphQlTester.document("""
+				mutation($id: ID!) {
+				  cancelFollowUp(id: $id) {
+				    id
+				  }
+				}
+				""")
+				.variable("id", followUpId)
+				.execute()
+				.errors()
+				.satisfy(errors -> assertThat(errors).isNotEmpty());
 	}
 
 	private String createContact(String firstName, String email) {

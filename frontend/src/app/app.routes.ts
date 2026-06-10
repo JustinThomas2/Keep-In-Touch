@@ -5,9 +5,11 @@ import { CompanyListComponent } from './pages/companies/company-list.component';
 import { ContactCreateComponent } from './pages/contacts/contact-create.component';
 import { ContactDetailComponent } from './pages/contacts/contact-detail.component';
 import { ContactListComponent } from './pages/contacts/contact-list.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'contacts' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: 'dashboard', component: DashboardComponent },
   { path: 'contacts', component: ContactListComponent },
   { path: 'contacts/new', component: ContactCreateComponent },
   { path: 'contacts/:id', component: ContactDetailComponent },

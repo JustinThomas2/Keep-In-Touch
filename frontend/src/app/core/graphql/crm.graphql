@@ -63,6 +63,34 @@ fragment InteractionFields on Interaction {
   updatedAt
 }
 
+fragment FollowUpFields on FollowUp {
+  id
+  contactId
+  interactionId
+  dueAt
+  status
+  reason
+  completedAt
+  createdAt
+  updatedAt
+  contact {
+    id
+    firstName
+    lastName
+    email
+    roleTitle
+    status
+    relationshipType
+    company {
+      id
+      name
+      website
+      industry
+      location
+    }
+  }
+}
+
 query Companies {
   companies {
     ...CompanyFields
@@ -93,6 +121,23 @@ query ContactInteractions($contactId: ID!) {
   }
 }
 
+query OpenFollowUp($contactId: ID!) {
+  openFollowUp(contactId: $contactId) {
+    ...FollowUpFields
+  }
+}
+
+query Dashboard {
+  dashboard {
+    dueFollowUps {
+      ...FollowUpFields
+    }
+    overdueFollowUps {
+      ...FollowUpFields
+    }
+  }
+}
+
 mutation CreateCompany($input: CreateCompanyInput!) {
   createCompany(input: $input) {
     ...CompanyFields
@@ -114,5 +159,23 @@ mutation CreateInteraction($input: CreateInteractionInput!) {
 mutation UpdateInteraction($input: UpdateInteractionInput!) {
   updateInteraction(input: $input) {
     ...InteractionFields
+  }
+}
+
+mutation CreateFollowUp($input: CreateFollowUpInput!) {
+  createFollowUp(input: $input) {
+    ...FollowUpFields
+  }
+}
+
+mutation CompleteFollowUp($id: ID!) {
+  completeFollowUp(id: $id) {
+    ...FollowUpFields
+  }
+}
+
+mutation CancelFollowUp($id: ID!) {
+  cancelFollowUp(id: $id) {
+    ...FollowUpFields
   }
 }
