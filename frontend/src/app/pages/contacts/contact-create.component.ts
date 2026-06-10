@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CrmService } from '../../core/crm.service';
-import { ContactStatus, RelationshipType } from '../../core/crm.types';
+import type { ContactStatus, RelationshipType } from '../../core/crm.types';
 import { blankToNull, numberOrNull, requiredText } from '../../core/form-utils';
 
 function required(control: AbstractControl): ValidationErrors | null {

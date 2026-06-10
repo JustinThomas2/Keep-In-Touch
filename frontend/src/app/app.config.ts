@@ -1,4 +1,5 @@
-import { ApplicationConfig, inject, provideZoneChangeDetection } from '@angular/core';
+import type { ApplicationConfig } from '@angular/core';
+import { inject, provideZoneChangeDetection } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { InMemoryCache } from '@apollo/client/cache';

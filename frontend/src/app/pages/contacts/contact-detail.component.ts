@@ -1,92 +1,61 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import type { AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { map, switchMap } from 'rxjs';
+import { map, shareReplay, switchMap } from 'rxjs';
 
 import { CrmService } from '../../core/crm.service';
+import type { Interaction, InteractionType } from '../../core/crm.types';
+import { blankToNull, requiredText } from '../../core/form-utils';
+
+function required(control: AbstractControl): ValidationErrors | null {
+  return Validators.required(control);
+}
 
 @Component({
   selector: 'app-contact-detail',
-  imports: [CommonModule, RouterLink],
-  template: `
-    <section class="page-shell">
-      <ng-container *ngIf="contact$ | async as contact; else loading">
-        <div class="page-header" *ngIf="contact; else missing">
-          <div>
-            <h1>{{ contact.firstName }} {{ contact.lastName || '' }}</h1>
-            <p>
-              {{ contact.roleTitle || contact.relationshipType }}
-              <span *ngIf="contact.company"> at {{ contact.company.name }}</span>
-            </p>
-          </div>
-          <a class="button is-light" routerLink="/contacts">Back to contacts</a>
-        </div>
-
-        <div class="detail-panel" *ngIf="contact">
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">Status</span>
-              <span class="status-pill">{{ contact.status }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Company</span>
-              <a class="detail-value" *ngIf="contact.company; else empty" [routerLink]="['/companies', contact.company.id]">
-                {{ contact.company.name }}
-              </a>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Email</span>
-              <a class="detail-value" *ngIf="contact.email; else empty" [href]="'mailto:' + contact.email">
-                {{ contact.email }}
-              </a>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Phone</span>
-              <div class="detail-value">{{ contact.phone || 'Not set' }}</div>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">LinkedIn</span>
-              <a class="detail-value" *ngIf="contact.linkedinUrl; else empty" [href]="contact.linkedinUrl" target="_blank">
-                {{ contact.linkedinUrl }}
-              </a>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Location</span>
-              <div class="detail-value">{{ contact.location || 'Not set' }}</div>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Birthday</span>
-              <div class="detail-value">{{ birthday(contact.birthdayMonth, contact.birthdayDay, contact.birthdayYear) }}</div>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Source</span>
-              <div class="detail-value">{{ contact.source || 'Not set' }}</div>
-            </div>
-            <div class="detail-item is-full">
-              <span class="detail-label">Notes</span>
-              <div class="detail-value">{{ contact.notes || 'No notes yet' }}</div>
-            </div>
-          </div>
-        </div>
-      </ng-container>
-
-      <ng-template #empty>Not set</ng-template>
-      <ng-template #missing>
-        <div class="empty-state">Contact not found.</div>
-      </ng-template>
-      <ng-template #loading>
-        <div class="empty-state">Loading contact...</div>
-      </ng-template>
-    </section>
-  `
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './contact-detail.component.html'
 })
 export class ContactDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly crm = inject(CrmService);
+  private readonly fb = inject(FormBuilder);
 
-  readonly contact$ = this.route.paramMap.pipe(
+  interactionError = '';
+  savingInteraction = false;
+  editingInteractionId: string | null = null;
+
+  readonly interactionTypes: InteractionType[] = [
+    'LINKEDIN_MESSAGE',
+    'EMAIL',
+    'COFFEE_CHAT',
+    'PHONE_CALL',
+    'SLACK',
+    'IN_PERSON',
+    'APPLICATION_REFERRAL',
+    'OTHER'
+  ];
+
+  readonly interactionForm = this.fb.nonNullable.group({
+    interactionType: this.fb.nonNullable.control<InteractionType>('EMAIL', { validators: [required] }),
+    occurredAt: [this.toDateTimeLocal(new Date()), required],
+    summary: ['', required],
+    outcome: ['']
+  });
+
+  private readonly contactId$ = this.route.paramMap.pipe(
     map((params) => params.get('id') ?? ''),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+
+  readonly contact$ = this.contactId$.pipe(
     switchMap((id) => this.crm.contact(id))
+  );
+
+  readonly interactions$ = this.contactId$.pipe(
+    switchMap((contactId) => this.crm.contactInteractions(contactId))
   );
 
   birthday(month: number | null, day: number | null, year: number | null): string {
@@ -96,5 +65,118 @@ export class ContactDetailComponent {
 
     const monthDay = `${String(month)}/${String(day)}`;
     return year === null ? monthDay : `${monthDay}/${String(year)}`;
+  }
+
+  formatDateTime(value: string | null): string {
+    if (value === null) {
+      return 'Not set';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(date);
+  }
+
+  editInteraction(interaction: Interaction): void {
+    this.editingInteractionId = interaction.id;
+    this.interactionError = '';
+    this.interactionForm.setValue({
+      interactionType: interaction.interactionType,
+      occurredAt: this.toDateTimeLocal(new Date(interaction.occurredAt)),
+      summary: interaction.summary,
+      outcome: interaction.outcome ?? ''
+    });
+  }
+
+  cancelEdit(): void {
+    this.editingInteractionId = null;
+    this.interactionError = '';
+    this.resetInteractionForm();
+  }
+
+  submitInteraction(contactId: string): void {
+    if (this.interactionForm.invalid || this.savingInteraction) {
+      return;
+    }
+
+    this.interactionError = '';
+    this.savingInteraction = true;
+    const value = this.interactionForm.getRawValue();
+    let input: {
+      interactionType: InteractionType;
+      occurredAt: string;
+      summary: string;
+      outcome: string | null;
+    };
+    try {
+      input = this.toInteractionInput(value);
+    }
+    catch {
+      this.interactionError = 'Interaction could not be saved. Check required fields and date/time.';
+      this.savingInteraction = false;
+      return;
+    }
+    const request = this.editingInteractionId === null
+      ? this.crm.createInteraction({ contactId, ...input })
+      : this.crm.updateInteraction({ id: this.editingInteractionId, ...input }, contactId);
+
+    request.subscribe({
+      next: () => {
+        this.savingInteraction = false;
+        this.editingInteractionId = null;
+        this.resetInteractionForm();
+      },
+      error: () => {
+        this.interactionError = 'Interaction could not be saved. Check required fields and date/time.';
+        this.savingInteraction = false;
+      }
+    });
+  }
+
+  private resetInteractionForm(): void {
+    this.interactionForm.setValue({
+      interactionType: 'EMAIL',
+      occurredAt: this.toDateTimeLocal(new Date()),
+      summary: '',
+      outcome: ''
+    });
+  }
+
+  private toDateTimeLocal(date: Date): string {
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localTime.toISOString().slice(0, 16);
+  }
+
+  private toIsoDateTime(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error('Interaction date/time is invalid.');
+    }
+
+    return date.toISOString();
+  }
+
+  private toInteractionInput(value: ReturnType<typeof this.interactionForm.getRawValue>): {
+    interactionType: InteractionType;
+    occurredAt: string;
+    summary: string;
+    outcome: string | null;
+  } {
+    return {
+      interactionType: value.interactionType,
+      occurredAt: this.toIsoDateTime(value.occurredAt),
+      summary: requiredText(value.summary),
+      outcome: blankToNull(value.outcome)
+    };
   }
 }

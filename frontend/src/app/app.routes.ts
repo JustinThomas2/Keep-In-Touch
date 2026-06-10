@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import type { Routes } from '@angular/router';
 import { CompanyCreateComponent } from './pages/companies/company-create.component';
 import { CompanyDetailComponent } from './pages/companies/company-detail.component';
 import { CompanyListComponent } from './pages/companies/company-list.component';

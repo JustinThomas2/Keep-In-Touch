@@ -1,0 +1,145 @@
+<section class="page-shell">
+  <ng-container *ngIf="contact$ | async as contact; else loading">
+    <div class="page-header" *ngIf="contact; else missing">
+      <div>
+        <h1>{{ contact.firstName }} {{ contact.lastName || '' }}</h1>
+        <p>
+          {{ contact.roleTitle || contact.relationshipType }}
+          <span *ngIf="contact.company"> at {{ contact.company.name }}</span>
+        </p>
+      </div>
+      <a class="button is-light" routerLink="/contacts">Back to contacts</a>
+    </div>
+
+    <div class="detail-panel" *ngIf="contact">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Status</span>
+          <span class="status-pill">{{ contact.status }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Company</span>
+          <a class="detail-value" *ngIf="contact.company; else empty" [routerLink]="['/companies', contact.company.id]">
+            {{ contact.company.name }}
+          </a>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Email</span>
+          <a class="detail-value" *ngIf="contact.email; else empty" [href]="'mailto:' + contact.email">
+            {{ contact.email }}
+          </a>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Phone</span>
+          <div class="detail-value">{{ contact.phone || 'Not set' }}</div>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">LinkedIn</span>
+          <a class="detail-value" *ngIf="contact.linkedinUrl; else empty" [href]="contact.linkedinUrl" target="_blank">
+            {{ contact.linkedinUrl }}
+          </a>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Location</span>
+          <div class="detail-value">{{ contact.location || 'Not set' }}</div>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Birthday</span>
+          <div class="detail-value">{{ birthday(contact.birthdayMonth, contact.birthdayDay, contact.birthdayYear) }}</div>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Source</span>
+          <div class="detail-value">{{ contact.source || 'Not set' }}</div>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Last interaction</span>
+          <div class="detail-value">{{ formatDateTime(contact.lastInteractionAt) }}</div>
+        </div>
+        <div class="detail-item is-full">
+          <span class="detail-label">Notes</span>
+          <div class="detail-value">{{ contact.notes || 'No notes yet' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-header related-header" *ngIf="contact">
+      <div>
+        <h2 class="title is-4">Interactions</h2>
+        <p>Recent conversations and outreach for this contact.</p>
+      </div>
+    </div>
+
+    <form class="form-panel interaction-form" *ngIf="contact" [formGroup]="interactionForm" (ngSubmit)="submitInteraction(contact.id)">
+      <div class="form-grid">
+        <div class="field">
+          <label class="label" for="interactionType">Type</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select id="interactionType" formControlName="interactionType">
+                <option *ngFor="let type of interactionTypes" [value]="type">{{ type }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="occurredAt">Date and time</label>
+          <div class="control">
+            <input class="input" id="occurredAt" type="datetime-local" formControlName="occurredAt" />
+          </div>
+        </div>
+
+        <div class="field is-full">
+          <label class="label" for="summary">Summary</label>
+          <div class="control">
+            <textarea class="textarea" id="summary" rows="3" formControlName="summary"></textarea>
+          </div>
+        </div>
+
+        <div class="field is-full">
+          <label class="label" for="outcome">Outcome</label>
+          <div class="control">
+            <textarea class="textarea" id="outcome" rows="2" formControlName="outcome"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <p class="notification is-danger is-light" *ngIf="interactionError">{{ interactionError }}</p>
+
+      <div class="toolbar">
+        <button class="button is-link" type="submit" [disabled]="interactionForm.invalid || savingInteraction">
+          {{ savingInteraction ? 'Saving...' : editingInteractionId ? 'Update interaction' : 'Add interaction' }}
+        </button>
+        <button class="button is-light" type="button" *ngIf="editingInteractionId" (click)="cancelEdit()">Cancel edit</button>
+      </div>
+    </form>
+
+    <ng-container *ngIf="interactions$ | async as interactions">
+      <div class="empty-state" *ngIf="contact && interactions.length === 0">
+        <p class="has-text-weight-semibold">No interactions yet.</p>
+      </div>
+
+      <div class="timeline" *ngIf="contact && interactions.length > 0">
+        <article class="timeline-item" *ngFor="let interaction of interactions">
+          <div>
+            <div class="timeline-heading">
+              <span class="status-pill">{{ interaction.interactionType }}</span>
+              <span class="row-meta">{{ formatDateTime(interaction.occurredAt) }}</span>
+            </div>
+            <p class="timeline-summary">{{ interaction.summary }}</p>
+            <p class="row-meta" *ngIf="interaction.outcome">{{ interaction.outcome }}</p>
+          </div>
+          <button class="button is-small is-light" type="button" (click)="editInteraction(interaction)">Edit</button>
+        </article>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <ng-template #empty>Not set</ng-template>
+  <ng-template #missing>
+    <div class="empty-state">Contact not found.</div>
+  </ng-template>
+  <ng-template #loading>
+    <div class="empty-state">Loading contact...</div>
+  </ng-template>
+</section>

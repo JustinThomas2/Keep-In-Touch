@@ -52,6 +52,17 @@ fragment ContactFields on Contact {
   }
 }
 
+fragment InteractionFields on Interaction {
+  id
+  contactId
+  interactionType
+  occurredAt
+  summary
+  outcome
+  createdAt
+  updatedAt
+}
+
 query Companies {
   companies {
     ...CompanyFields
@@ -76,6 +87,12 @@ query Contact($id: ID!) {
   }
 }
 
+query ContactInteractions($contactId: ID!) {
+  contactInteractions(contactId: $contactId) {
+    ...InteractionFields
+  }
+}
+
 mutation CreateCompany($input: CreateCompanyInput!) {
   createCompany(input: $input) {
     ...CompanyFields
@@ -85,5 +102,17 @@ mutation CreateCompany($input: CreateCompanyInput!) {
 mutation CreateContact($input: CreateContactInput!) {
   createContact(input: $input) {
     ...ContactFields
+  }
+}
+
+mutation CreateInteraction($input: CreateInteractionInput!) {
+  createInteraction(input: $input) {
+    ...InteractionFields
+  }
+}
+
+mutation UpdateInteraction($input: UpdateInteractionInput!) {
+  updateInteraction(input: $input) {
+    ...InteractionFields
   }
 }

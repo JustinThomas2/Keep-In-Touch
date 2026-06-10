@@ -1,30 +1,51 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Apollo, onlyCompleteData } from 'apollo-angular';
-import { map, Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { map } from 'rxjs';
 
-import type { Company, CompanyDetail, Contact, CreateCompanyInput, CreateContactInput } from './crm.types';
-import {
-  CompaniesDocument,
+import type {
+  Company,
+  CompanyDetail,
+  Contact,
+  CreateCompanyInput,
+  CreateContactInput,
+  CreateInteractionInput,
+  Interaction,
+  UpdateInteractionInput
+} from './crm.types';
+import type {
   CompaniesQuery,
-  CompanyDocument,
   CompanyQuery,
   CompanyQueryVariables,
-  ContactDocument,
+  ContactInteractionsQuery,
+  ContactInteractionsQueryVariables,
   ContactQuery,
   ContactQueryVariables,
-  ContactsDocument,
   ContactsQuery,
-  CreateCompanyDocument,
   CreateCompanyMutation,
   CreateCompanyMutationVariables,
-  CreateContactDocument,
   CreateContactMutation,
-  CreateContactMutationVariables
+  CreateContactMutationVariables,
+  CreateInteractionMutation,
+  CreateInteractionMutationVariables,
+  UpdateInteractionMutation,
+  UpdateInteractionMutationVariables
+} from './graphql/generated';
+import {
+  CompaniesDocument,
+  CompanyDocument,
+  ContactDocument,
+  ContactInteractionsDocument,
+  ContactsDocument,
+  CreateCompanyDocument,
+  CreateContactDocument,
+  CreateInteractionDocument,
+  UpdateInteractionDocument
 } from './graphql/generated';
 
 @Injectable({ providedIn: 'root' })
 export class CrmService {
-  constructor(private readonly apollo: Apollo) {}
+  private readonly apollo = inject(Apollo);
 
   companies(): Observable<Company[]> {
     return this.apollo
@@ -76,6 +97,19 @@ export class CrmService {
       );
   }
 
+  contactInteractions(contactId: string): Observable<Interaction[]> {
+    return this.apollo
+      .watchQuery<ContactInteractionsQuery, ContactInteractionsQueryVariables>({
+        query: ContactInteractionsDocument,
+        variables: { contactId },
+        fetchPolicy: 'cache-and-network'
+      })
+      .valueChanges.pipe(
+        onlyCompleteData(),
+        map((result) => result.data.contactInteractions)
+      );
+  }
+
   createCompany(input: CreateCompanyInput): Observable<Company> {
     return this.apollo
       .mutate<CreateCompanyMutation, CreateCompanyMutationVariables>({
@@ -94,6 +128,32 @@ export class CrmService {
         refetchQueries: [{ query: ContactsDocument }, { query: CompaniesDocument }]
       })
       .pipe(map((result) => this.requiredData(result.data).createContact));
+  }
+
+  createInteraction(input: CreateInteractionInput): Observable<Interaction> {
+    return this.apollo
+      .mutate<CreateInteractionMutation, CreateInteractionMutationVariables>({
+        mutation: CreateInteractionDocument,
+        variables: { input },
+        refetchQueries: [
+          { query: ContactDocument, variables: { id: input.contactId } },
+          { query: ContactInteractionsDocument, variables: { contactId: input.contactId } }
+        ]
+      })
+      .pipe(map((result) => this.requiredData(result.data).createInteraction));
+  }
+
+  updateInteraction(input: UpdateInteractionInput, contactId: string): Observable<Interaction> {
+    return this.apollo
+      .mutate<UpdateInteractionMutation, UpdateInteractionMutationVariables>({
+        mutation: UpdateInteractionDocument,
+        variables: { input },
+        refetchQueries: [
+          { query: ContactDocument, variables: { id: contactId } },
+          { query: ContactInteractionsDocument, variables: { contactId } }
+        ]
+      })
+      .pipe(map((result) => this.requiredData(result.data).updateInteraction));
   }
 
   private requiredData<T>(data: T | null | undefined): T {
