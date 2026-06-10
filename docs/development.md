@@ -24,6 +24,23 @@ Work only on the requested phase or task. Do not silently add new frameworks, ma
 
 If a schema, API, or product decision is needed, stop and ask or report the decision point clearly. After work is complete, report files changed, commands run, tests run, and any assumptions made.
 
+## Local Environment
+
+Local development uses a root `.env` file.
+
+Docker Compose reads the root `.env` for Postgres container settings. The backend `local` Spring profile also imports the same root `.env` through `../.env`, so backend commands should be run from the `backend/` directory.
+
+Expected root `.env`:
+
+```env
+POSTGRES_DB=keep_in_touch
+POSTGRES_USER=keep_in_touch
+POSTGRES_PASSWORD=keep_in_touch
+LOCAL_USER_EMAIL=local@keep-in-touch.test
+```
+
+`POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` are database configuration values. `LOCAL_USER_EMAIL` is the seeded local app user email used by the no-auth local app.
+
 ## Starting Local Infrastructure
 
 From the repo root:
@@ -35,11 +52,57 @@ docker compose ps
 
 `docker compose down` stops containers but keeps the named volume. `docker compose down -v` deletes local database data and should only be used when intentionally resetting the database.
 
+## Local Startup
+
+Use separate terminals.
+
+From the repo root, start Postgres:
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+In a backend terminal:
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+The backend GraphQL endpoint is:
+
+```text
+http://localhost:8080/graphql
+```
+
+GraphiQL is enabled for the local profile at:
+
+```text
+http://localhost:8080/graphiql
+```
+
+In a frontend terminal:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+The frontend runs through the Angular dev server, likely at:
+
+```text
+http://localhost:4200
+```
+
+API calls are proxied to the backend by the Angular proxy config.
+
 ## Backend Workflow
 
 ```bash
 cd backend
-SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ./mvnw test
 ```
 
@@ -101,8 +164,12 @@ From the repo root or appropriate folders, run:
 
 ```bash
 docker compose ps
-cd frontend && npm run codegen && npm run lint && npm run build
-cd ../backend && ./mvnw test
+cd frontend
+npm run codegen
+npm run lint
+npm run build
+cd ../backend
+./mvnw test
 ```
 
 Do not run:

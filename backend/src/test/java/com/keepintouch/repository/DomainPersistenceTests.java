@@ -22,7 +22,10 @@ import com.keepintouch.domain.User;
 
 import jakarta.persistence.EntityManager;
 
-@SpringBootTest(properties = "app.local-user-email=local@keep-in-touch.test")
+@SpringBootTest(properties = {
+		"spring.config.import=optional:file:../.env[.properties]",
+		"app.local-user-email=local@keep-in-touch.test"
+})
 @Transactional
 class DomainPersistenceTests {
 

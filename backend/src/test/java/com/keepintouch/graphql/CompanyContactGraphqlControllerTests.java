@@ -12,7 +12,10 @@ import org.springframework.boot.graphql.test.autoconfigure.tester.AutoConfigureG
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.graphql.test.tester.GraphQlTester;
 
-@SpringBootTest(properties = "app.local-user-email=local@keep-in-touch.test")
+@SpringBootTest(properties = {
+		"spring.config.import=optional:file:../.env[.properties]",
+		"app.local-user-email=local@keep-in-touch.test"
+})
 @AutoConfigureGraphQlTester
 class CompanyContactGraphqlControllerTests {
 
