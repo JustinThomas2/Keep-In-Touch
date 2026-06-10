@@ -12,7 +12,7 @@ import { CrmService } from '../../core/crm.service';
       <div class="page-header">
         <div>
           <h1>Companies</h1>
-          <p>Organizations connected to your relationship pipeline.</p>
+          <p>Organizations connected to your relationship context.</p>
         </div>
         <a class="button is-link" routerLink="/companies/new">New company</a>
       </div>
