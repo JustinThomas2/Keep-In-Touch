@@ -20,12 +20,24 @@ enum RelationshipType {
   OTHER
 }
 
+enum InteractionType {
+  LINKEDIN_MESSAGE
+  EMAIL
+  COFFEE_CHAT
+  PHONE_CALL
+  SLACK
+  IN_PERSON
+  APPLICATION_REFERRAL
+  OTHER
+}
+
 type Query {
   health: String!
   companies: [Company!]!
   company(id: ID!): Company
   contacts: [Contact!]!
   contact(id: ID!): Contact
+  contactInteractions(contactId: ID!): [Interaction!]!
 }
 
 type Mutation {
@@ -33,6 +45,8 @@ type Mutation {
   updateCompany(input: UpdateCompanyInput!): Company!
   createContact(input: CreateContactInput!): Contact!
   updateContact(input: UpdateContactInput!): Contact!
+  createInteraction(input: CreateInteractionInput!): Interaction!
+  updateInteraction(input: UpdateInteractionInput!): Interaction!
 }
 
 type Company {
@@ -69,6 +83,17 @@ type Contact {
   createdAt: String
   updatedAt: String
   company: Company
+}
+
+type Interaction {
+  id: ID!
+  contactId: ID!
+  interactionType: InteractionType!
+  occurredAt: String!
+  summary: String!
+  outcome: String
+  createdAt: String
+  updatedAt: String
 }
 
 input CreateCompanyInput {
@@ -125,4 +150,20 @@ input UpdateContactInput {
   birthdayMonth: Int
   birthdayDay: Int
   birthdayYear: Int
+}
+
+input CreateInteractionInput {
+  contactId: ID!
+  interactionType: InteractionType!
+  occurredAt: String!
+  summary: String!
+  outcome: String
+}
+
+input UpdateInteractionInput {
+  id: ID!
+  interactionType: InteractionType!
+  occurredAt: String!
+  summary: String!
+  outcome: String
 }

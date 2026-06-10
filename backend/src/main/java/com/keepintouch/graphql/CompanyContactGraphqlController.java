@@ -12,12 +12,15 @@ import org.springframework.stereotype.Controller;
 import com.keepintouch.domain.Company;
 import com.keepintouch.domain.Contact;
 import com.keepintouch.domain.ContactStatus;
+import com.keepintouch.domain.Interaction;
+import com.keepintouch.domain.InteractionType;
 import com.keepintouch.domain.RelationshipType;
 import com.keepintouch.domain.User;
 import com.keepintouch.repository.ContactRepository;
 import com.keepintouch.service.CompanyService;
 import com.keepintouch.service.ContactService;
 import com.keepintouch.service.CurrentUserService;
+import com.keepintouch.service.InteractionService;
 
 @Controller
 public class CompanyContactGraphqlController {
@@ -30,15 +33,19 @@ public class CompanyContactGraphqlController {
 
 	private final ContactRepository contactRepository;
 
+	private final InteractionService interactionService;
+
 	public CompanyContactGraphqlController(
 			CurrentUserService currentUserService,
 			CompanyService companyService,
 			ContactService contactService,
-			ContactRepository contactRepository) {
+			ContactRepository contactRepository,
+			InteractionService interactionService) {
 		this.currentUserService = currentUserService;
 		this.companyService = companyService;
 		this.contactService = contactService;
 		this.contactRepository = contactRepository;
+		this.interactionService = interactionService;
 	}
 
 	@QueryMapping
@@ -73,6 +80,17 @@ public class CompanyContactGraphqlController {
 				.orElse(null);
 	}
 
+	@QueryMapping
+	public List<InteractionPayload> contactInteractions(@Argument UUID contactId) {
+		User user = currentUserService.getCurrentUser();
+		if (contactService.findByIdAndUserId(contactId, user.getId()).isEmpty()) {
+			return List.of();
+		}
+		return interactionService.findByContactId(contactId).stream()
+				.map(this::toInteractionPayload)
+				.toList();
+	}
+
 	@MutationMapping
 	public CompanyPayload createCompany(@Argument CreateCompanyInput input) {
 		User user = currentUserService.getCurrentUser();
@@ -103,6 +121,20 @@ public class CompanyContactGraphqlController {
 				input.lastName(), input.preferredName(), input.roleTitle(), input.location(), input.linkedinUrl(),
 				input.email(), input.phone(), input.relationshipType(), input.status(), input.source(), input.notes(),
 				toShort(input.birthdayMonth()), toShort(input.birthdayDay()), input.birthdayYear()), true);
+	}
+
+	@MutationMapping
+	public InteractionPayload createInteraction(@Argument CreateInteractionInput input) {
+		User user = currentUserService.getCurrentUser();
+		return toInteractionPayload(interactionService.create(user.getId(), input.contactId(), input.interactionType(),
+				parse(input.occurredAt()), input.summary(), input.outcome()));
+	}
+
+	@MutationMapping
+	public InteractionPayload updateInteraction(@Argument UpdateInteractionInput input) {
+		User user = currentUserService.getCurrentUser();
+		return toInteractionPayload(interactionService.update(user.getId(), input.id(), input.interactionType(),
+				parse(input.occurredAt()), input.summary(), input.outcome()));
 	}
 
 	private CompanyPayload toCompanyPayload(Company company, boolean includeContacts) {
@@ -155,6 +187,22 @@ public class CompanyContactGraphqlController {
 		return value == null ? null : value.toString();
 	}
 
+	private InteractionPayload toInteractionPayload(Interaction interaction) {
+		return new InteractionPayload(
+				interaction.getId(),
+				interaction.getContact().getId(),
+				interaction.getInteractionType(),
+				format(interaction.getOccurredAt()),
+				interaction.getSummary(),
+				interaction.getOutcome(),
+				format(interaction.getCreatedAt()),
+				format(interaction.getUpdatedAt()));
+	}
+
+	private static OffsetDateTime parse(String value) {
+		return value == null ? null : OffsetDateTime.parse(value);
+	}
+
 	private static Short toShort(Integer value) {
 		return value == null ? null : value.shortValue();
 	}
@@ -197,6 +245,17 @@ public class CompanyContactGraphqlController {
 			String createdAt,
 			String updatedAt,
 			CompanyPayload company) {
+	}
+
+	public record InteractionPayload(
+			UUID id,
+			UUID contactId,
+			InteractionType interactionType,
+			String occurredAt,
+			String summary,
+			String outcome,
+			String createdAt,
+			String updatedAt) {
 	}
 
 	public record CreateCompanyInput(
@@ -253,5 +312,21 @@ public class CompanyContactGraphqlController {
 			Integer birthdayMonth,
 			Integer birthdayDay,
 			Integer birthdayYear) {
+	}
+
+	public record CreateInteractionInput(
+			UUID contactId,
+			InteractionType interactionType,
+			String occurredAt,
+			String summary,
+			String outcome) {
+	}
+
+	public record UpdateInteractionInput(
+			UUID id,
+			InteractionType interactionType,
+			String occurredAt,
+			String summary,
+			String outcome) {
 	}
 }

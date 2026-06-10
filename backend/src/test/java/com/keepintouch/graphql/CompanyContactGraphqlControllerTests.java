@@ -163,4 +163,168 @@ class CompanyContactGraphqlControllerTests {
 							assertThat(contact.get("email")).isEqualTo(email);
 						}));
 	}
+
+	@Test
+	void createsAndUpdatesInteractionsThroughGraphql() {
+		String suffix = UUID.randomUUID().toString();
+		String contactId = createContact("Phase 6 " + suffix, "phase6-" + suffix + "@example.com");
+
+		Map<String, Object> olderInput = new HashMap<>();
+		olderInput.put("contactId", contactId);
+		olderInput.put("interactionType", "EMAIL");
+		olderInput.put("occurredAt", "2026-01-01T14:00:00Z");
+		olderInput.put("summary", "Sent an intro email.");
+		olderInput.put("outcome", "Waiting for reply.");
+
+		graphQlTester.document("""
+				mutation($input: CreateInteractionInput!) {
+				  createInteraction(input: $input) {
+				    id
+				    contactId
+				    interactionType
+				    occurredAt
+				    summary
+				    outcome
+				  }
+				}
+				""")
+				.variable("input", olderInput)
+				.execute()
+				.path("createInteraction.contactId")
+				.entity(String.class)
+				.isEqualTo(contactId)
+				.path("createInteraction.interactionType")
+				.entity(String.class)
+				.isEqualTo("EMAIL")
+				.path("createInteraction.summary")
+				.entity(String.class)
+				.isEqualTo("Sent an intro email.")
+				.path("createInteraction.outcome")
+				.entity(String.class)
+				.isEqualTo("Waiting for reply.");
+
+		Map<String, Object> newerInput = new HashMap<>();
+		newerInput.put("contactId", contactId);
+		newerInput.put("interactionType", "COFFEE_CHAT");
+		newerInput.put("occurredAt", "2026-02-01T15:30:00Z");
+		newerInput.put("summary", "Met for coffee.");
+
+		String newerInteractionId = graphQlTester.document("""
+				mutation($input: CreateInteractionInput!) {
+				  createInteraction(input: $input) {
+				    id
+				    occurredAt
+				    summary
+				  }
+				}
+				""")
+				.variable("input", newerInput)
+				.execute()
+				.path("createInteraction.occurredAt")
+				.entity(String.class)
+				.isEqualTo("2026-02-01T15:30Z")
+				.path("createInteraction.summary")
+				.entity(String.class)
+				.isEqualTo("Met for coffee.")
+				.path("createInteraction.id")
+				.entity(String.class)
+				.get();
+
+		graphQlTester.document("""
+				query($contactId: ID!) {
+				  contactInteractions(contactId: $contactId) {
+				    id
+				    occurredAt
+				    summary
+				  }
+				}
+				""")
+				.variable("contactId", contactId)
+				.execute()
+				.path("contactInteractions[0].id")
+				.entity(String.class)
+				.isEqualTo(newerInteractionId)
+				.path("contactInteractions[0].summary")
+				.entity(String.class)
+				.isEqualTo("Met for coffee.");
+
+		graphQlTester.document("""
+				query($id: ID!) {
+				  contact(id: $id) {
+				    lastInteractionAt
+				  }
+				}
+				""")
+				.variable("id", contactId)
+				.execute()
+				.path("contact.lastInteractionAt")
+				.entity(String.class)
+				.isEqualTo("2026-02-01T15:30Z");
+
+		Map<String, Object> updateInput = new HashMap<>();
+		updateInput.put("id", newerInteractionId);
+		updateInput.put("interactionType", "PHONE_CALL");
+		updateInput.put("occurredAt", "2025-12-15T12:00:00Z");
+		updateInput.put("summary", "Moved this to a phone call.");
+		updateInput.put("outcome", "Call completed.");
+
+		graphQlTester.document("""
+				mutation($input: UpdateInteractionInput!) {
+				  updateInteraction(input: $input) {
+				    id
+				    interactionType
+				    occurredAt
+				    summary
+				    outcome
+				  }
+				}
+				""")
+				.variable("input", updateInput)
+				.execute()
+				.path("updateInteraction.id")
+				.entity(String.class)
+				.isEqualTo(newerInteractionId)
+				.path("updateInteraction.interactionType")
+				.entity(String.class)
+				.isEqualTo("PHONE_CALL")
+				.path("updateInteraction.summary")
+				.entity(String.class)
+				.isEqualTo("Moved this to a phone call.")
+				.path("updateInteraction.outcome")
+				.entity(String.class)
+				.isEqualTo("Call completed.");
+
+		graphQlTester.document("""
+				query($id: ID!) {
+				  contact(id: $id) {
+				    lastInteractionAt
+				  }
+				}
+				""")
+				.variable("id", contactId)
+				.execute()
+				.path("contact.lastInteractionAt")
+				.entity(String.class)
+				.isEqualTo("2026-01-01T14:00Z");
+	}
+
+	private String createContact(String firstName, String email) {
+		Map<String, Object> contactInput = new HashMap<>();
+		contactInput.put("firstName", firstName);
+		contactInput.put("relationshipType", "PROFESSIONAL");
+		contactInput.put("email", email);
+
+		return graphQlTester.document("""
+				mutation($input: CreateContactInput!) {
+				  createContact(input: $input) {
+				    id
+				  }
+				}
+				""")
+				.variable("input", contactInput)
+				.execute()
+				.path("createContact.id")
+				.entity(String.class)
+				.get();
+	}
 }
