@@ -114,6 +114,12 @@ GraphQL schema changes live in:
 backend/src/main/resources/graphql/schema.graphqls
 ```
 
+## Backend Testing
+
+Backend integration tests use Testcontainers with a temporary Postgres database. `./mvnw test` does not require `docker compose up`, does not use the root `.env`, and should not write to the normal local development database.
+
+Docker must be available because Testcontainers starts its own Postgres container for the test run. The normal application still uses the root `.env` for local manual startup with the `local` Spring profile.
+
 ## Frontend Workflow
 
 ```bash
@@ -218,6 +224,9 @@ AI and LLM coding agents should follow these rules:
 - Do not manually edit generated GraphQL files.
 - Keep formatter changes in a dedicated commit when possible.
 - If formatting causes large churn, report it clearly.
+- Do not point backend tests at the local development database.
+- Do not import `../.env` in backend tests.
+- Use the shared Testcontainers integration test base for Spring integration tests that need persistence.
 - If editing GraphQL operations, run codegen afterward.
 - If editing backend schema, check whether frontend codegen needs to be rerun.
 - If adding dependencies, explain why they are necessary.

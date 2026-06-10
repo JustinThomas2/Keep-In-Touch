@@ -2,6 +2,7 @@ package com.keepintouch.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.keepintouch.AbstractPostgresIntegrationTest;
 import com.keepintouch.domain.Company;
 import com.keepintouch.domain.Contact;
 import com.keepintouch.domain.ContactStatus;
@@ -19,13 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest(
-    properties = {
-      "spring.config.import=optional:file:../.env[.properties]",
-      "app.local-user-email=local@keep-in-touch.test"
-    })
+@SpringBootTest(properties = "app.local-user-email=local@keep-in-touch.test")
 @Transactional
-class DomainPersistenceTests {
+class DomainPersistenceTests extends AbstractPostgresIntegrationTest {
 
   private final UserRepository userRepository;
 

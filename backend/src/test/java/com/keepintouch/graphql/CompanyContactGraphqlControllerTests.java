@@ -2,6 +2,7 @@ package com.keepintouch.graphql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.keepintouch.AbstractPostgresIntegrationTest;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,13 +13,9 @@ import org.springframework.boot.graphql.test.autoconfigure.tester.AutoConfigureG
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.graphql.test.tester.GraphQlTester;
 
-@SpringBootTest(
-    properties = {
-      "spring.config.import=optional:file:../.env[.properties]",
-      "app.local-user-email=local@keep-in-touch.test"
-    })
+@SpringBootTest(properties = "app.local-user-email=local@keep-in-touch.test")
 @AutoConfigureGraphQlTester
-class CompanyContactGraphqlControllerTests {
+class CompanyContactGraphqlControllerTests extends AbstractPostgresIntegrationTest {
 
   private final GraphQlTester graphQlTester;
 
