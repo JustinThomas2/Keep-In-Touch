@@ -3,6 +3,7 @@ package com.keepintouch.graphql;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.keepintouch.AbstractPostgresIntegrationTest;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -553,6 +554,111 @@ class CompanyContactGraphqlControllerTests extends AbstractPostgresIntegrationTe
                           assertThat(followUp.get("id")).isEqualTo(followUpId);
                           assertThat(followUp.get("reason")).isEqualTo("Check in today.");
                         }));
+  }
+
+  @Test
+  void updatesAndShowsUpcomingBirthdaysThroughGraphql() {
+    String suffix = UUID.randomUUID().toString();
+    String contactId = createContact("Birthday " + suffix, "birthday-" + suffix + "@example.com");
+    LocalDate birthday = LocalDate.now().plusDays(10);
+
+    Map<String, Object> updateInput = new HashMap<>();
+    updateInput.put("id", contactId);
+    updateInput.put("firstName", "Birthday " + suffix);
+    updateInput.put("relationshipType", "PROFESSIONAL");
+    updateInput.put("birthdayMonth", birthday.getMonthValue());
+    updateInput.put("birthdayDay", birthday.getDayOfMonth());
+
+    graphQlTester
+        .document(
+            """
+				mutation($input: UpdateContactInput!) {
+				  updateContact(input: $input) {
+				    id
+				    birthdayMonth
+				    birthdayDay
+				    birthdayYear
+				  }
+				}
+				""")
+        .variable("input", updateInput)
+        .execute()
+        .path("updateContact.birthdayMonth")
+        .entity(Integer.class)
+        .isEqualTo(birthday.getMonthValue())
+        .path("updateContact.birthdayDay")
+        .entity(Integer.class)
+        .isEqualTo(birthday.getDayOfMonth())
+        .path("updateContact.birthdayYear")
+        .valueIsNull();
+
+    graphQlTester
+        .document(
+            """
+				query {
+				  dashboard {
+				    upcomingBirthdays {
+				      id
+				      birthdayMonth
+				      birthdayDay
+				    }
+				  }
+				}
+				""")
+        .execute()
+        .path("dashboard.upcomingBirthdays")
+        .entityList(Map.class)
+        .satisfies(
+            contacts ->
+                assertThat(contacts)
+                    .anySatisfy(
+                        contact -> {
+                          assertThat(contact.get("id")).isEqualTo(contactId);
+                          assertThat(contact.get("birthdayMonth"))
+                              .isEqualTo(birthday.getMonthValue());
+                          assertThat(contact.get("birthdayDay"))
+                              .isEqualTo(birthday.getDayOfMonth());
+                        }));
+
+    graphQlTester
+        .document(
+            """
+				query {
+				  upcomingBirthdays {
+				    id
+				  }
+				}
+				""")
+        .execute()
+        .path("upcomingBirthdays")
+        .entityList(Map.class)
+        .satisfies(
+            contacts ->
+                assertThat(contacts)
+                    .anySatisfy(contact -> assertThat(contact.get("id")).isEqualTo(contactId)));
+  }
+
+  @Test
+  void rejectsInvalidBirthdayThroughGraphql() {
+    Map<String, Object> contactInput = new HashMap<>();
+    contactInput.put("firstName", "Invalid Birthday " + UUID.randomUUID());
+    contactInput.put("relationshipType", "PROFESSIONAL");
+    contactInput.put("birthdayMonth", 2);
+    contactInput.put("birthdayDay", 30);
+
+    graphQlTester
+        .document(
+            """
+				mutation($input: CreateContactInput!) {
+				  createContact(input: $input) {
+				    id
+				  }
+				}
+				""")
+        .variable("input", contactInput)
+        .execute()
+        .errors()
+        .satisfy(errors -> assertThat(errors).isNotEmpty());
   }
 
   @Test

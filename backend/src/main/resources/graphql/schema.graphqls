@@ -45,6 +45,7 @@ type Query {
   contact(id: ID!): Contact
   contactInteractions(contactId: ID!): [Interaction!]!
   openFollowUp(contactId: ID!): FollowUp
+  upcomingBirthdays: [Contact!]!
   dashboard: Dashboard!
 }
 
@@ -123,6 +124,7 @@ type FollowUp {
 type Dashboard {
   dueFollowUps: [FollowUp!]!
   overdueFollowUps: [FollowUp!]!
+  upcomingBirthdays: [Contact!]!
 }
 
 input CreateCompanyInput {

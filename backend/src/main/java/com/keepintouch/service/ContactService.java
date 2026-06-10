@@ -6,6 +6,9 @@ import com.keepintouch.domain.RelationshipType;
 import com.keepintouch.domain.User;
 import com.keepintouch.repository.CompanyRepository;
 import com.keepintouch.repository.ContactRepository;
+import java.time.LocalDate;
+import java.time.MonthDay;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +42,16 @@ public class ContactService {
 
   public Optional<Contact> findByIdAndUserId(UUID id, UUID userId) {
     return contactRepository.findByIdAndUserId(id, userId);
+  }
+
+  public List<Contact> findUpcomingBirthdays(UUID userId, LocalDate today, int daysAhead) {
+    LocalDate end = today.plusDays(daysAhead);
+    return contactRepository
+        .findByUserIdAndBirthdayMonthIsNotNullAndBirthdayDayIsNotNull(userId)
+        .stream()
+        .filter(contact -> !nextBirthday(contact, today).isAfter(end))
+        .sorted(Comparator.comparing(contact -> nextBirthday(contact, today)))
+        .toList();
   }
 
   @Transactional
@@ -171,9 +184,50 @@ public class ContactService {
     contact.setStatus(requireNonNull(status, "Contact status is required."));
     contact.setSource(blankToNull(source));
     contact.setNotes(blankToNull(notes));
+    validateBirthday(birthdayMonth, birthdayDay, birthdayYear);
     contact.setBirthdayMonth(birthdayMonth);
     contact.setBirthdayDay(birthdayDay);
     contact.setBirthdayYear(birthdayYear);
+  }
+
+  private static LocalDate nextBirthday(Contact contact, LocalDate today) {
+    LocalDate birthday =
+        birthdayInYear(contact.getBirthdayMonth(), contact.getBirthdayDay(), today.getYear());
+    if (birthday.isBefore(today)) {
+      return birthdayInYear(
+          contact.getBirthdayMonth(), contact.getBirthdayDay(), today.getYear() + 1);
+    }
+    return birthday;
+  }
+
+  private static LocalDate birthdayInYear(Short month, Short day, int year) {
+    if (month == 2 && day == 29 && !java.time.Year.isLeap(year)) {
+      return LocalDate.of(year, 2, 28);
+    }
+    return MonthDay.of(month, day).atYear(year);
+  }
+
+  private static void validateBirthday(Short month, Short day, Integer year) {
+    if ((month == null) != (day == null)) {
+      throw new IllegalArgumentException("Birthday month and day must be set together.");
+    }
+    if (year != null && month == null) {
+      throw new IllegalArgumentException("Birthday year requires month and day.");
+    }
+    if (month == null) {
+      return;
+    }
+    if (month < 1 || month > 12) {
+      throw new IllegalArgumentException("Birthday month must be between 1 and 12.");
+    }
+    if (day < 1 || day > 31) {
+      throw new IllegalArgumentException("Birthday day must be between 1 and 31.");
+    }
+    if (year == null) {
+      MonthDay.of(month, day);
+      return;
+    }
+    LocalDate.of(year, month, day);
   }
 
   private void validateUniqueEmail(Contact contact) {

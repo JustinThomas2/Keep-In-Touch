@@ -12,6 +12,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'contacts', component: ContactListComponent },
   { path: 'contacts/new', component: ContactCreateComponent },
+  { path: 'contacts/:id/edit', component: ContactCreateComponent },
   { path: 'contacts/:id', component: ContactDetailComponent },
   { path: 'companies', component: CompanyListComponent },
   { path: 'companies/new', component: CompanyCreateComponent },

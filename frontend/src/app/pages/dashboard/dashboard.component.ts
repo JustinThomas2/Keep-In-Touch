@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { CrmService } from '../../core/crm.service';
-import type { FollowUp } from '../../core/crm.types';
+import type { Contact, FollowUp } from '../../core/crm.types';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,6 +19,49 @@ import type { FollowUp } from '../../core/crm.types';
 
       <ng-container *ngIf="dashboard$ | async as dashboard; else loading">
         <div class="dashboard-grid">
+          <section>
+            <div class="page-header related-header">
+              <div>
+                <h2 class="title is-4">Upcoming birthdays</h2>
+                <p>Birthdays coming up in the next 30 days.</p>
+              </div>
+            </div>
+
+            <div
+              class="empty-state"
+              *ngIf="dashboard.upcomingBirthdays.length === 0"
+            >
+              <p class="has-text-weight-semibold">No upcoming birthdays.</p>
+            </div>
+
+            <div
+              class="list-grid"
+              *ngIf="dashboard.upcomingBirthdays.length > 0"
+            >
+              <article
+                class="list-row"
+                *ngFor="let contact of dashboard.upcomingBirthdays"
+              >
+                <div>
+                  <a
+                    class="row-title"
+                    [routerLink]="['/contacts', contact.id]"
+                    >{{ contactName(contact) }}</a
+                  >
+                  <div class="row-meta">
+                    {{ birthday(contact) }}
+                  </div>
+                  <p class="timeline-summary">
+                    {{ contact.roleTitle || contact.relationshipType }}
+                    <span *ngIf="contact.company">
+                      at {{ contact.company.name }}</span
+                    >
+                  </p>
+                </div>
+              </article>
+            </div>
+          </section>
+
           <section>
             <div class="page-header related-header">
               <div>
@@ -130,8 +173,20 @@ export class DashboardComponent {
 
   readonly dashboard$ = this.crm.dashboard();
 
-  contactName(followUp: FollowUp): string {
-    return `${followUp.contact.firstName} ${followUp.contact.lastName ?? ''}`.trim();
+  contactName(value: Contact | FollowUp): string {
+    const contact = 'contact' in value ? value.contact : value;
+    return `${contact.firstName} ${contact.lastName ?? ''}`.trim();
+  }
+
+  birthday(contact: Contact): string {
+    if (contact.birthdayMonth === null || contact.birthdayDay === null) {
+      return 'Birthday not set';
+    }
+
+    const monthDay = `${String(contact.birthdayMonth)}/${String(contact.birthdayDay)}`;
+    return contact.birthdayYear === null
+      ? monthDay
+      : `${monthDay}/${String(contact.birthdayYear)}`;
   }
 
   formatDateTime(value: string): string {

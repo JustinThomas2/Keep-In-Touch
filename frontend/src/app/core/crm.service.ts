@@ -14,6 +14,7 @@ import type {
   Dashboard,
   FollowUp,
   Interaction,
+  UpdateContactInput,
   UpdateInteractionInput,
 } from './crm.types';
 import type {
@@ -40,6 +41,8 @@ import type {
   DashboardQuery,
   OpenFollowUpQuery,
   OpenFollowUpQueryVariables,
+  UpdateContactMutation,
+  UpdateContactMutationVariables,
   UpdateInteractionMutation,
   UpdateInteractionMutationVariables,
 } from './graphql/generated';
@@ -57,6 +60,7 @@ import {
   CreateInteractionDocument,
   DashboardDocument,
   OpenFollowUpDocument,
+  UpdateContactDocument,
   UpdateInteractionDocument,
 } from './graphql/generated';
 
@@ -173,6 +177,21 @@ export class CrmService {
         ],
       })
       .pipe(map((result) => this.requiredData(result.data).createContact));
+  }
+
+  updateContact(input: UpdateContactInput): Observable<Contact> {
+    return this.apollo
+      .mutate<UpdateContactMutation, UpdateContactMutationVariables>({
+        mutation: UpdateContactDocument,
+        variables: { input },
+        refetchQueries: [
+          { query: ContactDocument, variables: { id: input.id } },
+          { query: ContactsDocument },
+          { query: CompaniesDocument },
+          { query: DashboardDocument },
+        ],
+      })
+      .pipe(map((result) => this.requiredData(result.data).updateContact));
   }
 
   createInteraction(input: CreateInteractionInput): Observable<Interaction> {

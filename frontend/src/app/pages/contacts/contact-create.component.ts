@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { take } from 'rxjs';
 
 import { CrmService } from '../../core/crm.service';
 import type { ContactStatus, RelationshipType } from '../../core/crm.types';
@@ -19,10 +20,27 @@ function required(control: AbstractControl): ValidationErrors | null {
     <section class="page-shell">
       <div class="page-header">
         <div>
-          <h1>New contact</h1>
-          <p>Add the person and optionally associate them with a company.</p>
+          <h1>
+            {{ editingContactId === null ? 'New contact' : 'Edit contact' }}
+          </h1>
+          <p>
+            {{
+              editingContactId === null
+                ? 'Add the person and optionally associate them with a company.'
+                : "Update this person's details and birthday information."
+            }}
+          </p>
         </div>
-        <a class="button is-light" routerLink="/contacts">Cancel</a>
+        <a
+          class="button is-light"
+          [routerLink]="
+            editingContactId === null
+              ? '/contacts'
+              : ['/contacts', editingContactId]
+          "
+        >
+          Cancel
+        </a>
       </div>
 
       <form class="form-panel" [formGroup]="form" (ngSubmit)="submit()">
@@ -246,9 +264,23 @@ function required(control: AbstractControl): ValidationErrors | null {
             type="submit"
             [disabled]="form.invalid || saving"
           >
-            {{ saving ? 'Saving...' : 'Create contact' }}
+            {{
+              saving
+                ? 'Saving...'
+                : editingContactId === null
+                  ? 'Create contact'
+                  : 'Save contact'
+            }}
           </button>
-          <a class="button is-light" routerLink="/contacts">Cancel</a>
+          <a
+            class="button is-light"
+            [routerLink]="
+              editingContactId === null
+                ? '/contacts'
+                : ['/contacts', editingContactId]
+            "
+            >Cancel</a
+          >
         </div>
       </form>
     </section>
@@ -262,6 +294,7 @@ export class ContactCreateComponent {
 
   error = '';
   saving = false;
+  editingContactId: string | null = null;
 
   readonly companies$ = this.crm.companies();
   readonly relationshipTypes: RelationshipType[] = [
@@ -308,9 +341,44 @@ export class ContactCreateComponent {
   });
 
   constructor() {
+    this.editingContactId = this.route.snapshot.paramMap.get('id');
     const companyId = this.route.snapshot.queryParamMap.get('companyId');
     if (companyId !== null && companyId.length > 0) {
       this.form.controls.companyId.setValue(companyId);
+    }
+    if (this.editingContactId !== null) {
+      this.crm
+        .contact(this.editingContactId)
+        .pipe(take(1))
+        .subscribe({
+          next: (contact) => {
+            if (contact === null || this.editingContactId === null) {
+              this.error = 'Contact could not be loaded.';
+              return;
+            }
+            this.form.setValue({
+              companyId: contact.company?.id ?? '',
+              firstName: contact.firstName,
+              lastName: contact.lastName ?? '',
+              preferredName: contact.preferredName ?? '',
+              roleTitle: contact.roleTitle ?? '',
+              location: contact.location ?? '',
+              linkedinUrl: contact.linkedinUrl ?? '',
+              email: contact.email ?? '',
+              phone: contact.phone ?? '',
+              relationshipType: contact.relationshipType,
+              status: contact.status,
+              source: contact.source ?? '',
+              notes: contact.notes ?? '',
+              birthdayMonth: contact.birthdayMonth?.toString() ?? '',
+              birthdayDay: contact.birthdayDay?.toString() ?? '',
+              birthdayYear: contact.birthdayYear?.toString() ?? '',
+            });
+          },
+          error: () => {
+            this.error = 'Contact could not be loaded.';
+          },
+        });
     }
   }
 
@@ -323,32 +391,40 @@ export class ContactCreateComponent {
     this.saving = true;
     const value = this.form.getRawValue();
 
-    this.crm
-      .createContact({
-        companyId: blankToNull(value.companyId),
-        firstName: requiredText(value.firstName),
-        lastName: blankToNull(value.lastName),
-        preferredName: blankToNull(value.preferredName),
-        roleTitle: blankToNull(value.roleTitle),
-        location: blankToNull(value.location),
-        linkedinUrl: blankToNull(value.linkedinUrl),
-        email: blankToNull(value.email),
-        phone: blankToNull(value.phone),
-        relationshipType: value.relationshipType,
-        status: value.status,
-        source: blankToNull(value.source),
-        notes: blankToNull(value.notes),
-        birthdayMonth: numberOrNull(value.birthdayMonth),
-        birthdayDay: numberOrNull(value.birthdayDay),
-        birthdayYear: numberOrNull(value.birthdayYear),
-      })
-      .subscribe({
-        next: (contact) => void this.router.navigate(['/contacts', contact.id]),
-        error: () => {
-          this.error =
-            'Contact could not be created. Check required fields, email uniqueness, and birthday values.';
-          this.saving = false;
-        },
-      });
+    const input = {
+      companyId: blankToNull(value.companyId),
+      firstName: requiredText(value.firstName),
+      lastName: blankToNull(value.lastName),
+      preferredName: blankToNull(value.preferredName),
+      roleTitle: blankToNull(value.roleTitle),
+      location: blankToNull(value.location),
+      linkedinUrl: blankToNull(value.linkedinUrl),
+      email: blankToNull(value.email),
+      phone: blankToNull(value.phone),
+      relationshipType: value.relationshipType,
+      status: value.status,
+      source: blankToNull(value.source),
+      notes: blankToNull(value.notes),
+      birthdayMonth: numberOrNull(value.birthdayMonth),
+      birthdayDay: numberOrNull(value.birthdayDay),
+      birthdayYear: numberOrNull(value.birthdayYear),
+    };
+
+    const request =
+      this.editingContactId === null
+        ? this.crm.createContact(input)
+        : this.crm.updateContact({
+            id: this.editingContactId,
+            ...input,
+          });
+
+    request.subscribe({
+      next: (contact) => void this.router.navigate(['/contacts', contact.id]),
+      error: () => {
+        this.error =
+          'Contact could not be saved. Check required fields, email uniqueness, and birthday values.';
+        this.saving = false;
+      },
+    });
   }
 }

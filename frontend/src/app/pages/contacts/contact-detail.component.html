@@ -8,7 +8,14 @@
           <span *ngIf="contact.company"> at {{ contact.company.name }}</span>
         </p>
       </div>
-      <a class="button is-light" routerLink="/contacts">Back to contacts</a>
+      <div class="toolbar">
+        <a
+          class="button is-light"
+          [routerLink]="['/contacts', contact.id, 'edit']"
+          >Edit</a
+        >
+        <a class="button is-light" routerLink="/contacts">Back to contacts</a>
+      </div>
     </div>
 
     <div class="detail-panel" *ngIf="contact">

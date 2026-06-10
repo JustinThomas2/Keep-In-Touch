@@ -135,6 +135,9 @@ query Dashboard {
     overdueFollowUps {
       ...FollowUpFields
     }
+    upcomingBirthdays {
+      ...ContactFields
+    }
   }
 }
 
@@ -146,6 +149,12 @@ mutation CreateCompany($input: CreateCompanyInput!) {
 
 mutation CreateContact($input: CreateContactInput!) {
   createContact(input: $input) {
+    ...ContactFields
+  }
+}
+
+mutation UpdateContact($input: UpdateContactInput!) {
+  updateContact(input: $input) {
     ...ContactFields
   }
 }

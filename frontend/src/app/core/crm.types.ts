@@ -13,6 +13,7 @@ import type {
   InteractionFieldsFragment,
   InteractionType,
   RelationshipType,
+  UpdateContactInput,
   UpdateInteractionInput,
 } from './graphql/generated';
 
@@ -32,5 +33,6 @@ export type {
   FollowUpStatus,
   InteractionType,
   RelationshipType,
+  UpdateContactInput,
   UpdateInteractionInput,
 };

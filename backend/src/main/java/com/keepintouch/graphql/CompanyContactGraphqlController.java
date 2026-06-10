@@ -15,6 +15,7 @@ import com.keepintouch.service.ContactService;
 import com.keepintouch.service.CurrentUserService;
 import com.keepintouch.service.FollowUpService;
 import com.keepintouch.service.InteractionService;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -108,6 +109,14 @@ public class CompanyContactGraphqlController {
   }
 
   @QueryMapping
+  public List<ContactPayload> upcomingBirthdays() {
+    User user = currentUserService.getCurrentUser();
+    return contactService.findUpcomingBirthdays(user.getId(), LocalDate.now(), 30).stream()
+        .map(contact -> toContactPayload(contact, true))
+        .toList();
+  }
+
+  @QueryMapping
   public DashboardPayload dashboard() {
     User user = currentUserService.getCurrentUser();
     OffsetDateTime now = OffsetDateTime.now();
@@ -117,6 +126,9 @@ public class CompanyContactGraphqlController {
             .toList(),
         followUpService.findOverdueByUserId(user.getId(), now).stream()
             .map(this::toFollowUpPayload)
+            .toList(),
+        contactService.findUpcomingBirthdays(user.getId(), LocalDate.now(), 30).stream()
+            .map(contact -> toContactPayload(contact, true))
             .toList());
   }
 
@@ -394,7 +406,9 @@ public class CompanyContactGraphqlController {
       ContactPayload contact) {}
 
   public record DashboardPayload(
-      List<FollowUpPayload> dueFollowUps, List<FollowUpPayload> overdueFollowUps) {}
+      List<FollowUpPayload> dueFollowUps,
+      List<FollowUpPayload> overdueFollowUps,
+      List<ContactPayload> upcomingBirthdays) {}
 
   public record CreateCompanyInput(
       String name, String website, String industry, String location, String notes) {}
