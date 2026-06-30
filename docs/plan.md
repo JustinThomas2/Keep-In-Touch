@@ -495,7 +495,9 @@ Example exclusion explanation:
 
 Phase 5: Discord notification payload
 
-Status: Not started
+Status: Complete
+
+Notification design is documented in `docs/job-watcher-notification-design.md`.
 
 Design the alert to be sent through Discord using a webhook.
 
@@ -734,8 +736,8 @@ Documentation:
 * [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
 * [ ] Document local-first worker runtime decision
 * [x] Document Postgres-backed state/idempotency decision
-* [ ] Document Discord webhook notification design
-* [ ] Document how to configure DISCORD_WEBHOOK_URL locally
+* [x] Document Discord webhook notification design
+* [x] Document how to configure DISCORD_WEBHOOK_URL locally
 * [ ] Document how to run the watcher manually in dry-run mode
 * [ ] Document future scheduling options: cron, systemd, Docker Compose
 
@@ -800,14 +802,14 @@ Runner:
 
 Notifications:
 
-* [ ] Add Discord webhook notification sender
-* [ ] Read DISCORD_WEBHOOK_URL from environment
-* [ ] Add JOB_WATCHER_SEND_DISCORD or equivalent explicit enable flag
-* [ ] Add dry-run mode that prints Discord payload without sending
-* [ ] Add test for Discord payload formatting
-* [ ] Add safe error handling for failed Discord sends
-* [ ] Ensure failed Discord sends are logged without crashing the entire watcher run
-* [ ] Persist Discord send outcome in JobAlert
+* [x] Plan Discord webhook notification sender
+* [x] Plan reading DISCORD_WEBHOOK_URL from environment
+* [x] Plan JOB_WATCHER_SEND_DISCORD or equivalent explicit enable flag
+* [x] Plan dry-run mode that prints Discord payload without sending
+* [x] Plan test for Discord payload formatting
+* [x] Plan safe error handling for failed Discord sends
+* [x] Plan failed Discord sends being logged without crashing the entire watcher run
+* [x] Plan persisted Discord send outcome in JobAlert
 
 Tests:
 
