@@ -558,7 +558,9 @@ Discord formatting guidance:
 
 Phase 6: Local-first worker execution
 
-Status: Not started
+Status: Complete
+
+Worker execution design is documented in `docs/job-watcher-worker-design.md`.
 
 Plan a local-first worker instead of a GitHub Actions scheduled workflow.
 
@@ -734,12 +736,12 @@ Documentation:
 * [x] Reference job watcher research from docs/plan.md
 * [ ] Document the four initial watched companies and seed URLs
 * [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
-* [ ] Document local-first worker runtime decision
+* [x] Document local-first worker runtime decision
 * [x] Document Postgres-backed state/idempotency decision
 * [x] Document Discord webhook notification design
 * [x] Document how to configure DISCORD_WEBHOOK_URL locally
-* [ ] Document how to run the watcher manually in dry-run mode
-* [ ] Document future scheduling options: cron, systemd, Docker Compose
+* [x] Document how to run the watcher manually in dry-run mode
+* [x] Document future scheduling options: cron, systemd, Docker Compose
 
 Source research:
 
@@ -792,13 +794,13 @@ Fingerprinting and idempotency:
 
 Runner:
 
-* [ ] Add dry-run CLI command
-* [ ] Print source summaries
-* [ ] Print matched jobs
-* [ ] Print source errors without failing the entire run
-* [ ] Print Discord payload in dry-run mode
-* [ ] Add live run mode that writes to Postgres
-* [ ] Ensure live mode does not send Discord unless explicitly enabled
+* [x] Plan dry-run CLI command
+* [x] Plan source summaries
+* [x] Plan matched jobs output
+* [x] Plan source errors without failing the entire run
+* [x] Plan Discord payload output in dry-run mode
+* [x] Plan live run mode that writes to Postgres
+* [x] Plan live mode not sending Discord unless explicitly enabled
 
 Notifications:
 
