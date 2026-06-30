@@ -146,7 +146,7 @@ Tasks:
 * Identify current backend stack, data model, migrations, docs, and tests.
 * Find where project planning docs live.
 * If docs/plan.md exists, update it carefully.
-* If a more focused doc is better, create docs/job-watcher-plan.md and link/reference it from docs/plan.md.
+* If a more focused doc is better, create a supporting research or notes doc and link/reference it from docs/plan.md.
 * Do not overwrite useful existing planning context.
 * Preserve the current project direction and add this as a practical extension of the personal CRM.
 
@@ -156,7 +156,9 @@ Document the feature in phases.
 
 Phase 1: Source research spike
 
-Status: Not started
+Status: Complete
+
+Findings are documented in `docs/job-watcher-research.md`.
 
 For each of the four target boards, determine the least brittle extraction strategy.
 
@@ -720,8 +722,8 @@ Create a checklist that can be implemented later today.
 
 Documentation:
 
-* [ ] Add docs/job-watcher-plan.md
-* [ ] Reference job watcher plan from docs/plan.md
+* [x] Add docs/job-watcher-research.md
+* [x] Reference job watcher research from docs/plan.md
 * [ ] Document the four initial watched companies and seed URLs
 * [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
 * [ ] Document local-first worker runtime decision

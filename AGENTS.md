@@ -22,6 +22,8 @@ Do not create GitHub Actions workflows unless explicitly requested.
 
 Do not add new dependencies unless necessary for the requested task. Explain why any dependency is needed.
 
+Reserve `plan` in filenames for actual planning documents. Do not create supporting research, notes, spike, or implementation-detail files with `plan` in the filename; use names like `*-research.md`, `*-notes.md`, or `*-spike.md` instead.
+
 ## Generated files
 
 Do not edit generated GraphQL files manually.
