@@ -139,6 +139,8 @@ Document the feature in phases.
 
 Phase 1: Source research spike
 
+Status: Not started
+
 For each of the four target boards, determine the least brittle extraction strategy.
 
 Questions to answer for each source:
@@ -221,6 +223,8 @@ MoodysCareersAdapter:
 * Treat SuccessFactors as the apply destination unless a better canonical source is found.
 
 Phase 2: Data model
+
+Status: Not started
 
 Add or plan entities/tables for:
 
@@ -312,6 +316,8 @@ Recommended alert status values:
 
 Phase 3: Adapter design
 
+Status: Not started
+
 Create an adapter-based ingestion design.
 
 JobSourceAdapter:
@@ -360,6 +366,8 @@ Watcher runner responsibilities:
 * Log summary.
 
 Phase 4: Matching
+
+Status: Not started
 
 Create deterministic matching logic focused on relevant SWE roles in the USA.
 
@@ -434,6 +442,8 @@ Example exclusion explanation:
 
 Phase 5: Discord notification payload
 
+Status: Not started
+
 Design the alert to be sent through Discord using a webhook.
 
 MVP notification decision:
@@ -486,6 +496,8 @@ Discord formatting guidance:
 
 Phase 6: Scheduled execution
 
+Status: Not started
+
 Plan a GitHub Actions workflow:
 
 * Runs every 6 hours.
@@ -522,6 +534,8 @@ Scheduled runner behavior:
 * Support dry-run mode that prints the Discord payload without sending.
 
 Phase 7: MVP implementation scope
+
+Status: Not started
 
 Define a small first implementation that can be completed safely later today.
 
