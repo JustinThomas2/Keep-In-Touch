@@ -243,7 +243,9 @@ MoodysCareersAdapter:
 
 Phase 2: Data model and state persistence
 
-Status: Not started
+Status: Complete
+
+Schema decisions are documented in `docs/schema.md`.
 
 Add or plan entities/tables for watcher state.
 
@@ -727,7 +729,7 @@ Documentation:
 * [ ] Document the four initial watched companies and seed URLs
 * [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
 * [ ] Document local-first worker runtime decision
-* [ ] Document Postgres-backed state/idempotency decision
+* [x] Document Postgres-backed state/idempotency decision
 * [ ] Document Discord webhook notification design
 * [ ] Document how to configure DISCORD_WEBHOOK_URL locally
 * [ ] Document how to run the watcher manually in dry-run mode
@@ -743,17 +745,17 @@ Source research:
 
 Data model:
 
-* [ ] Add or plan migration for watched job sources
-* [ ] Add or plan migration for job postings
-* [ ] Add or plan migration for job match rules
-* [ ] Add or plan migration for job alerts
-* [ ] Add stableKey uniqueness strategy
-* [ ] Add source status fields for lastCheckedAt, lastSuccessfulCheckAt, and lastError
+* [x] Add or plan migration for watched job sources
+* [x] Add or plan migration for job postings
+* [x] Add or plan migration for job match rules
+* [x] Add or plan migration for job alerts
+* [x] Add stableKey uniqueness strategy
+* [x] Add source status fields for lastCheckedAt, lastSuccessfulCheckAt, and lastError
 
 Core types:
 
 * [ ] Add normalized job type
-* [ ] Add watched source config type/entity
+* [x] Plan watched source config type/entity
 * [ ] Add job source adapter interface
 * [ ] Add match result type
 * [ ] Add Discord notification payload type if useful

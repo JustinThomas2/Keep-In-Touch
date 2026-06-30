@@ -22,11 +22,20 @@
   - [`contacts`](#contacts)
   - [`interactions`](#interactions)
   - [`follow_ups`](#follow_ups)
+  - [`watched_job_sources`](#watched_job_sources)
+  - [`job_postings`](#job_postings)
+  - [`job_match_rules`](#job_match_rules)
+  - [`job_alerts`](#job_alerts)
 - [Enum Values](#enum-values)
   - [`ContactStatus`](#contactstatus)
   - [`RelationshipType`](#relationshiptype)
   - [`InteractionType`](#interactiontype)
   - [`FollowUpStatus`](#followupstatus)
+  - [`JobSourceType`](#jobsourcetype)
+  - [`JobPostingStatus`](#jobpostingstatus)
+  - [`JobAlertChannel`](#jobalertchannel)
+  - [`JobAlertStatus`](#jobalertstatus)
+  - [`RemotePreference`](#remotepreference)
 - [Relationship Notes](#relationship-notes)
   - [User Ownership](#user-ownership)
   - [Contacts and Companies](#contacts-and-companies)
@@ -336,6 +345,72 @@ erDiagram
         TIMESTAMPTZ updated_at
     }
 
+    WATCHED_JOB_SOURCES {
+        UUID id PK
+        UUID company_id FK
+        VARCHAR source_type
+        VARCHAR original_source_url
+        VARCHAR canonical_source_url
+        BOOLEAN enabled
+        TIMESTAMPTZ last_checked_at
+        TIMESTAMPTZ last_successful_check_at
+        TEXT last_error
+        TEXT notes
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    JOB_POSTINGS {
+        UUID id PK
+        UUID company_id FK
+        UUID source_id FK
+        VARCHAR external_id
+        VARCHAR stable_key
+        VARCHAR title
+        VARCHAR location
+        VARCHAR country
+        VARCHAR url
+        VARCHAR canonical_url
+        VARCHAR apply_url
+        VARCHAR department
+        VARCHAR job_category
+        VARCHAR experience_level
+        TIMESTAMPTZ posted_at
+        TEXT description_snippet
+        TIMESTAMPTZ first_seen_at
+        TIMESTAMPTZ last_seen_at
+        VARCHAR content_hash
+        VARCHAR status
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    JOB_MATCH_RULES {
+        UUID id PK
+        UUID user_id FK
+        UUID company_id FK
+        TEXT include_keywords
+        TEXT exclude_keywords
+        TEXT include_countries
+        TEXT include_locations
+        VARCHAR remote_preference
+        BOOLEAN enabled
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    JOB_ALERTS {
+        UUID id PK
+        UUID job_posting_id FK
+        TIMESTAMPTZ sent_at
+        VARCHAR channel
+        VARCHAR status
+        TEXT error_message
+        TEXT payload_preview
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
     USERS ||--o{ CONTACTS : owns
     USERS ||--o{ COMPANIES : owns
 
@@ -345,6 +420,13 @@ erDiagram
     CONTACTS ||--o{ FOLLOW_UPS : has
 
     INTERACTIONS ||--o{ FOLLOW_UPS : may_create
+
+    COMPANIES ||--o{ WATCHED_JOB_SOURCES : watched_by
+    COMPANIES ||--o{ JOB_POSTINGS : has
+    WATCHED_JOB_SOURCES ||--o{ JOB_POSTINGS : discovers
+    USERS ||--o{ JOB_MATCH_RULES : owns
+    COMPANIES ||--o{ JOB_MATCH_RULES : scopes
+    JOB_POSTINGS ||--o{ JOB_ALERTS : triggers
 ```
 
 ## Table Descriptions
@@ -600,6 +682,196 @@ When a follow-up changes state, the backend should update `contacts.next_follow_
 
 A follow-up can be attached directly to a contact, and it may optionally be attached to the interaction that created the need for that follow-up.
 
+---
+
+## `watched_job_sources`
+
+Stores configured job board sources for companies the user wants to watch.
+
+The job watcher is local-first, so this table records source configuration and source health in Postgres instead of GitHub Actions cache, artifacts, or committed state files.
+
+### Columns
+
+| Column | Type | Required | Notes |
+|---|---|---:|---|
+| `id` | `UUID` | yes | Primary key |
+| `company_id` | `UUID` | yes | Company being watched |
+| `source_type` | `VARCHAR(50)` | yes | Adapter/source type |
+| `original_source_url` | `VARCHAR(1000)` | yes | User-provided seed URL |
+| `canonical_source_url` | `VARCHAR(1000)` | no | Discovered stable source URL/API URL |
+| `enabled` | `BOOLEAN` | yes | Whether the watcher should check this source |
+| `last_checked_at` | `TIMESTAMPTZ` | no | Last attempted check, successful or failed |
+| `last_successful_check_at` | `TIMESTAMPTZ` | no | Last successful source check |
+| `last_error` | `TEXT` | no | Most recent source-level error |
+| `notes` | `TEXT` | no | Source-specific adapter notes |
+| `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | yes | Last update timestamp |
+
+### Constraints
+
+- `id` primary key
+- `company_id` references `companies(id)` with `ON DELETE CASCADE`
+- `(id, company_id)` unique for composite ownership/source references
+- `source_type` not null
+- `original_source_url` not null
+- `enabled` not null
+
+### Notes
+
+`original_source_url` must preserve the user's manually filtered seed URL, even if the adapter discovers a better canonical API or result URL.
+
+Source failures should update `last_checked_at` and `last_error` without failing the entire watcher run.
+
+---
+
+## `job_postings`
+
+Stores jobs discovered from watched sources.
+
+This table is the source of truth for idempotency. The watcher should use it to answer whether a job has been seen before, whether it changed, and whether it disappeared from a source.
+
+### Columns
+
+| Column | Type | Required | Notes |
+|---|---|---:|---|
+| `id` | `UUID` | yes | Primary key |
+| `company_id` | `UUID` | yes | Company that owns the posting |
+| `source_id` | `UUID` | yes | Watched source that discovered the posting |
+| `external_id` | `VARCHAR(255)` | no | Source-provided job ID or requisition ID |
+| `stable_key` | `VARCHAR(1000)` | yes | Deterministic key used for idempotency |
+| `title` | `VARCHAR(500)` | yes | Job title |
+| `location` | `VARCHAR(500)` | no | Raw or normalized location text |
+| `country` | `VARCHAR(100)` | no | Best-effort country, such as `US` or `UNKNOWN` |
+| `url` | `VARCHAR(1000)` | yes | Job detail URL |
+| `canonical_url` | `VARCHAR(1000)` | no | Normalized URL if different from `url` |
+| `apply_url` | `VARCHAR(1000)` | no | Apply URL when available |
+| `department` | `VARCHAR(255)` | no | Department or team |
+| `job_category` | `VARCHAR(255)` | no | Job category |
+| `experience_level` | `VARCHAR(255)` | no | Experience/seniority text |
+| `posted_at` | `TIMESTAMPTZ` | no | Source-provided posting date |
+| `description_snippet` | `TEXT` | no | Short description or normalized excerpt |
+| `first_seen_at` | `TIMESTAMPTZ` | yes | First time the watcher saw this job |
+| `last_seen_at` | `TIMESTAMPTZ` | yes | Most recent successful run that saw this job |
+| `content_hash` | `VARCHAR(128)` | yes | Hash of normalized job content |
+| `status` | `VARCHAR(50)` | yes | Active/removed/ignored |
+| `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | yes | Last update timestamp |
+
+### Constraints
+
+- `id` primary key
+- `company_id` references `companies(id)` with `ON DELETE CASCADE`
+- `(source_id, company_id)` references `watched_job_sources(id, company_id)` with `ON DELETE CASCADE`
+- `stable_key` not null
+- `title` not null
+- `url` not null
+- `first_seen_at` not null
+- `last_seen_at` not null
+- `content_hash` not null
+- `status` not null
+- `status` must be `ACTIVE`, `REMOVED`, or `IGNORED`
+- `last_seen_at` should be greater than or equal to `first_seen_at`
+- `stable_key` should be unique per source
+
+### Notes
+
+The preferred stable key is:
+
+```text
+sourceType + externalId
+```
+
+If `external_id` is missing, use:
+
+```text
+sourceType + normalized title + normalized location + canonical URL
+```
+
+When a previously seen job changes, update `content_hash`, `last_seen_at`, and changed fields. Do not resend alerts by default.
+
+When a job disappears from a source, mark it `REMOVED` after a safe threshold or after a clear missing-from-source run.
+
+---
+
+## `job_match_rules`
+
+Stores deterministic matching rules for job postings.
+
+Rules can be global to a user or scoped to a company. A company-specific rule should override or supplement the global default rule in service code.
+
+### Columns
+
+| Column | Type | Required | Notes |
+|---|---|---:|---|
+| `id` | `UUID` | yes | Primary key |
+| `user_id` | `UUID` | yes | Owner |
+| `company_id` | `UUID` | no | Optional company scope |
+| `include_keywords` | `TEXT` | yes | Newline-separated include keywords |
+| `exclude_keywords` | `TEXT` | yes | Newline-separated exclude keywords |
+| `include_countries` | `TEXT` | yes | Newline-separated country codes/names |
+| `include_locations` | `TEXT` | no | Newline-separated location text hints |
+| `remote_preference` | `VARCHAR(50)` | yes | Remote matching preference |
+| `enabled` | `BOOLEAN` | yes | Whether this rule is active |
+| `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | yes | Last update timestamp |
+
+### Constraints
+
+- `id` primary key
+- `user_id` references `users(id)` with `ON DELETE CASCADE`
+- `(company_id, user_id)` references `companies(id, user_id)` with `ON DELETE CASCADE`
+- `include_keywords` not null
+- `exclude_keywords` not null
+- `include_countries` not null
+- `remote_preference` not null
+- `enabled` not null
+
+### Notes
+
+Text columns are intentionally used for keyword lists to keep the first migration and JPA mapping simple. Service code should parse them into trimmed, lower-cased lists.
+
+The first seed rule should target relevant USA-based SWE roles and exclude clearly too-senior or wrong-specialty postings by default.
+
+---
+
+## `job_alerts`
+
+Stores notification attempts for matched job postings.
+
+This table prevents repeated Discord notifications for the same job.
+
+### Columns
+
+| Column | Type | Required | Notes |
+|---|---|---:|---|
+| `id` | `UUID` | yes | Primary key |
+| `job_posting_id` | `UUID` | yes | Job that triggered or would trigger the alert |
+| `sent_at` | `TIMESTAMPTZ` | no | When the alert was sent |
+| `channel` | `VARCHAR(50)` | yes | Console, Discord, or manual channel |
+| `status` | `VARCHAR(50)` | yes | Sent/failed/skipped |
+| `error_message` | `TEXT` | no | Failure reason |
+| `payload_preview` | `TEXT` | no | Sanitized notification preview |
+| `created_at` | `TIMESTAMPTZ` | yes | Creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | yes | Last update timestamp |
+
+### Constraints
+
+- `id` primary key
+- `job_posting_id` references `job_postings(id)` with `ON DELETE CASCADE`
+- `channel` not null
+- `status` not null
+- `status` must be `SENT`, `FAILED`, or `SKIPPED`
+- `SENT` alerts require `sent_at`
+- Non-`SENT` alerts may leave `sent_at` null
+
+### Notes
+
+Do not persist Discord webhook URLs or secrets in this table.
+
+Do not send a Discord alert if a `SENT` Discord alert already exists for the same job posting.
+
+Dry-run console output does not need to create `job_alerts` rows unless a future workflow explicitly wants persisted dry-run history.
+
 ## Enum Values
 
 These values should likely be represented as Java enums, GraphQL enums, and stored in Postgres as `VARCHAR(50)`.
@@ -685,6 +957,85 @@ CANCELLED
 For MVP, changing a follow-up date should update `due_at` while the follow-up remains `OPEN`.
 
 Later, if due-date change history matters, we can add a separate follow-up events table.
+
+## `JobSourceType`
+
+Describes where a watched job source comes from and which adapter should handle it.
+
+```text
+CAPITAL_ONE_CAREERS
+CLERK_CAREERS
+CLERK_ASHBY
+VANGUARD_CAREERS
+MOODYS_CAREERS
+CUSTOM_HTML
+MANUAL
+```
+
+### Notes
+
+The first implementation should prefer the company-specific values above. `CUSTOM_HTML` and `MANUAL` are escape hatches, not the main MVP path.
+
+## `JobPostingStatus`
+
+Describes the lifecycle state of a discovered job posting.
+
+```text
+ACTIVE
+REMOVED
+IGNORED
+```
+
+### Notes
+
+`REMOVED` means the job was previously seen but is no longer present in the watched source after a safe missing-from-source check.
+
+`IGNORED` means the user or service intentionally excluded the posting from alerts while keeping the record for idempotency.
+
+## `JobAlertChannel`
+
+Describes where a job alert was delivered or recorded.
+
+```text
+CONSOLE
+DISCORD_WEBHOOK
+MANUAL
+```
+
+### Notes
+
+`CONSOLE` is useful for dry-run output if persisted later, but MVP dry-runs can simply print without creating alert rows.
+
+## `JobAlertStatus`
+
+Describes the result of a job alert attempt.
+
+```text
+SENT
+FAILED
+SKIPPED
+```
+
+### Notes
+
+Only `SENT` alerts should block future Discord sends for the same job.
+
+`FAILED` should keep enough error context for troubleshooting but should not store secrets.
+
+## `RemotePreference`
+
+Describes how matching should treat remote jobs.
+
+```text
+US_ONLY
+REMOTE_US_ALLOWED
+REMOTE_ALLOWED
+ONSITE_ONLY
+```
+
+### Notes
+
+For the first watcher rule, `REMOTE_US_ALLOWED` is the practical default: include USA onsite/hybrid roles and remote roles that appear open to US candidates.
 
 ## Relationship Notes
 
@@ -800,11 +1151,55 @@ Custom personal dates beyond birthdays are post-MVP.
 MVP uses hard deletes with explicit database behavior:
 
 - Deleting a user deletes that user's companies and contacts.
+- Deleting a user deletes that user's global job match rules.
 - Deleting a contact deletes its interactions and follow-ups.
 - Deleting a company is restricted while contacts still reference it.
+- Deleting a company deletes its watched job sources, job postings, and related job alerts.
+- Deleting a watched job source deletes its job postings and related job alerts.
+- Deleting a job posting deletes its job alerts.
 - Deleting an interaction clears `follow_ups.interaction_id` but does not delete the follow-up.
 
 Soft deletion is not part of MVP.
+
+### Job Watcher Ownership
+
+Watched job sources belong to companies, and companies belong to users.
+
+Job postings belong to both the company and the watched source that discovered them. The database should enforce that a posting's `source_id` belongs to the same company as the posting through a composite reference:
+
+```text
+job_postings(source_id, company_id) -> watched_job_sources(id, company_id)
+```
+
+Job match rules belong directly to users because global rules can exist without a company. If `company_id` is present, the rule must point to a company owned by the same user.
+
+Job alerts belong to job postings. A sent Discord alert is the durable marker that prevents duplicate Discord notifications.
+
+### Job Watcher Idempotency
+
+The watcher should use Postgres state to answer:
+
+- Has this job been seen before?
+- Has this job already triggered a Discord alert?
+- When did this source last run successfully?
+- Which sources are failing?
+- Which jobs disappeared from a source?
+
+Preferred stable key:
+
+```text
+source_type + external_id
+```
+
+Fallback stable key:
+
+```text
+source_type + normalized_title + normalized_location + canonical_url
+```
+
+If a job already exists for `(source_id, stable_key)`, update `last_seen_at`, `content_hash`, and changed metadata. Do not create a second job row.
+
+If a `SENT` `DISCORD_WEBHOOK` alert already exists for a job posting, do not send another Discord alert by default.
 
 ## Suggested Indexes
 
@@ -843,6 +1238,33 @@ CREATE INDEX idx_follow_ups_contact_status
 
 CREATE INDEX idx_follow_ups_status_due_at
     ON follow_ups(status, due_at);
+
+CREATE INDEX idx_watched_job_sources_company_id
+    ON watched_job_sources(company_id);
+
+CREATE INDEX idx_watched_job_sources_enabled
+    ON watched_job_sources(enabled);
+
+CREATE INDEX idx_job_postings_company_status
+    ON job_postings(company_id, status);
+
+CREATE INDEX idx_job_postings_source_last_seen_at
+    ON job_postings(source_id, last_seen_at DESC);
+
+CREATE INDEX idx_job_postings_status_posted_at
+    ON job_postings(status, posted_at DESC);
+
+CREATE INDEX idx_job_match_rules_user_enabled
+    ON job_match_rules(user_id, enabled);
+
+CREATE INDEX idx_job_match_rules_company_id
+    ON job_match_rules(company_id);
+
+CREATE INDEX idx_job_alerts_job_posting_id
+    ON job_alerts(job_posting_id);
+
+CREATE INDEX idx_job_alerts_channel_status
+    ON job_alerts(channel, status);
 ```
 
 ## Suggested Unique Indexes
@@ -858,6 +1280,22 @@ CREATE UNIQUE INDEX uniq_contacts_user_email
 ```
 
 This allows multiple contacts without email, but prevents duplicate emails for the same user.
+
+Watcher idempotency should use a unique index per source/stable key:
+
+```sql
+CREATE UNIQUE INDEX uniq_job_postings_source_stable_key
+    ON job_postings(source_id, stable_key);
+```
+
+Discord delivery should use a partial unique index so one sent Discord alert blocks repeated sends while still allowing failed attempts to be retried:
+
+```sql
+CREATE UNIQUE INDEX uniq_job_alerts_sent_discord
+    ON job_alerts(job_posting_id, channel)
+    WHERE channel = 'DISCORD_WEBHOOK'
+      AND status = 'SENT';
+```
 
 For one open follow-up per contact in MVP, use a partial unique index:
 
