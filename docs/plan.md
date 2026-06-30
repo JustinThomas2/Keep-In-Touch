@@ -9,7 +9,7 @@ Before making changes:
 * Do not overwrite useful existing planning context.
 
 Goal:
-Add a systematic plan for a “company job watcher” feature that tracks job postings at the user's actual target companies, matches them against relevant USA-based SWE roles, and alerts the user in Discord when a relevant role appears so they can quickly ask the right contact for a referral.
+Add a systematic plan for a “company job watcher” feature that tracks job postings at the user's actual target companies, matches them against relevant USA-based SWE roles, persists watcher state in the CRM database, and alerts the user in Discord when a relevant role appears so they can quickly ask the right contact for a referral.
 
 Product framing:
 This is not a generic job scraper.
@@ -21,7 +21,21 @@ As a job seeker, I want to watch companies where I have warm contacts, detect ne
 Why this matters:
 The user has already made warm connections at some companies, and some contacts may be willing to offer referrals. The missing piece is timing: the right job may not be posted yet. This feature should help the user become an early applicant while also having a warm referral path.
 
-Important:
+Important runtime direction:
+This feature should be built as a local-first worker that writes state to the CRM Postgres database.
+
+Do not use GitHub Actions as the MVP runtime.
+Do not use GitHub Actions cache, artifacts, or committed JSON state files as the source of truth.
+GitHub Actions can remain a future deployment option, but the MVP should use the app's real database for idempotency, alert history, and source status.
+
+Preferred progression:
+
+1. Manual dry-run command.
+2. Manual live run with Discord disabled by default.
+3. Local scheduled worker using cron, systemd timer, or Docker Compose.
+4. Later move the same worker to an always-on machine, home server, VPS, or cloud host.
+
+Important source URL note:
 The provided URLs are the user's current manually filtered watch URLs. Treat them as seed URLs, not guaranteed canonical API URLs.
 
 For each source:
@@ -110,7 +124,8 @@ Global assumptions:
 
 * Check cadence: every 6 hours.
 * Free/low-cost first.
-* Prefer GitHub Actions scheduled workflow for MVP.
+* Prefer local-first execution for MVP.
+* Persist watcher state in Postgres.
 * Prefer direct HTTP fetch + parsing before browser automation.
 * Avoid LinkedIn scraping.
 * Avoid broad web crawling.
@@ -121,6 +136,8 @@ Global assumptions:
 * Initial scope should be based on these four real boards, not hypothetical Greenhouse/Lever coverage.
 * Notifications should happen through Discord using a Discord webhook.
 * Console dry-run should come before real Discord delivery.
+* Discord sending should be disabled by default unless explicitly configured.
+* The same job should not trigger repeated alerts.
 
 Tasks:
 
@@ -222,11 +239,23 @@ MoodysCareersAdapter:
 * Fetch individual detail pages only if needed.
 * Treat SuccessFactors as the apply destination unless a better canonical source is found.
 
-Phase 2: Data model
+Phase 2: Data model and state persistence
 
 Status: Not started
 
-Add or plan entities/tables for:
+Add or plan entities/tables for watcher state.
+
+Important:
+Because the MVP is local-first, Postgres is the source of truth for watcher state.
+
+Do not use GitHub Actions artifacts, cache, or committed state files for idempotency.
+The database should answer:
+
+* Have we seen this job before?
+* Has this job already triggered a Discord alert?
+* When did this source last run successfully?
+* Which sources are failing?
+* Which jobs disappeared from the source?
 
 WatchedJobSource:
 
@@ -259,10 +288,12 @@ JobPosting:
 * companyId
 * sourceId
 * externalId
+* stableKey
 * title
 * location
 * country nullable
 * url
+* canonicalUrl nullable
 * applyUrl nullable
 * department nullable
 * jobCategory nullable
@@ -301,6 +332,7 @@ JobAlert:
 * channel
 * status
 * errorMessage nullable
+* payloadPreview nullable
 
 Recommended channel values:
 
@@ -313,6 +345,14 @@ Recommended alert status values:
 * SENT
 * FAILED
 * SKIPPED
+
+Idempotency rules:
+
+* Use sourceType + externalId as the preferred stable job key.
+* If externalId is missing, use sourceType + normalized title + normalized location + canonical URL.
+* Do not send a Discord alert if a JobAlert with status SENT already exists for the JobPosting.
+* If a previously seen job changes, update contentHash and lastSeenAt but do not resend by default.
+* If a job disappears from the source, mark it REMOVED after a safe threshold or after a clear missing-from-source run.
 
 Phase 3: Adapter design
 
@@ -331,11 +371,13 @@ JobSourceAdapter:
 NormalizedJob:
 
 * externalId
+* stableKey nullable
 * title
 * companyName
 * location
 * country nullable
 * url
+* canonicalUrl nullable
 * applyUrl nullable
 * department nullable
 * jobCategory nullable
@@ -352,16 +394,19 @@ Adapter responsibilities:
 * Be resilient to empty results.
 * Fail source-by-source, not run-wide.
 * Return parse errors in a way the runner can log.
+* Avoid persisting directly; adapters should return normalized data to the runner/service layer.
 
 Watcher runner responsibilities:
 
-* Load enabled watched sources.
+* Load enabled watched sources from Postgres.
 * Run each adapter.
 * Normalize jobs.
+* Generate stable keys.
 * Fingerprint jobs.
-* Compare with previously seen jobs.
+* Upsert job postings into Postgres.
+* Compare against previously seen jobs in Postgres.
 * Run deterministic matching.
-* Create alerts only for new relevant postings.
+* Create JobAlert records only for new relevant postings.
 * Send Discord webhook notifications only for new matches when not in dry-run mode.
 * Log summary.
 
@@ -450,14 +495,19 @@ MVP notification decision:
 
 * Notifications should happen through Discord.
 * Use a Discord webhook for MVP.
-* Store the webhook URL in a GitHub Actions repository secret.
+* Read DISCORD_WEBHOOK_URL from the local environment or Docker environment.
 * Do not commit webhook URLs or tokens.
 * Notification delivery should happen only after source ingestion, matching, and idempotency are working.
 * Prefer console dry-run before real Discord delivery.
+* Discord sending should be disabled by default unless explicitly enabled.
 
-GitHub Actions secret:
+Environment variable:
 
 * DISCORD_WEBHOOK_URL
+
+Optional environment variable:
+
+* JOB_WATCHER_SEND_DISCORD=true
 
 Alert should include:
 
@@ -493,45 +543,78 @@ Discord formatting guidance:
 * Include best contact if available.
 * Include “why it matched” so the user can quickly judge relevance.
 * Do not send repeated notifications for the same job.
+* Persist JobAlert status after send attempt.
+* If Discord sending fails, store JobAlert status FAILED and errorMessage.
 
-Phase 6: Scheduled execution
+Phase 6: Local-first worker execution
 
 Status: Not started
 
-Plan a GitHub Actions workflow:
+Plan a local-first worker instead of a GitHub Actions scheduled workflow.
 
-* Runs every 6 hours.
-* Executes the watcher in dry-run or live mode.
-* Uses DISCORD_WEBHOOK_URL from repository secrets when Discord sending is enabled.
-* Checks configured sources.
-* Matches relevant jobs.
-* Sends Discord webhook notifications for new matches only.
-* Logs summary:
+Runtime goal:
+The job watcher should be runnable as a command that connects to the existing CRM Postgres database, checks watched sources, updates watcher state, and optionally sends Discord notifications.
 
-  * sources checked
-  * jobs found
-  * new jobs
-  * matches
-  * alerts sent
-  * failed sources
-* Does not fail the entire workflow because one company source breaks.
-* Each source failure should be recorded and reported in the run summary.
+Preferred execution modes:
 
-Suggested cron:
+1. Dry-run mode
+
+* Runs adapters.
+* Prints source summaries.
+* Prints found jobs.
+* Prints matched jobs.
+* Prints Discord payload previews.
+* Does not send Discord notifications.
+* Does not mutate persisted state unless explicitly configured.
+
+2. Live manual mode
+
+* Runs adapters.
+* Writes seen jobs to Postgres.
+* Writes source check status to Postgres.
+* Creates JobAlert records for new matches.
+* Sends Discord notifications only if enabled and DISCORD_WEBHOOK_URL is configured.
+* Does not resend alerts for jobs already alerted.
+
+3. Local scheduled mode
+
+* Runs every 6 hours using one of:
+
+  * host cron
+  * systemd timer
+  * Docker Compose worker service
+  * a small local scheduler process
+
+Recommended first local command shape:
+Create a dry-run command similar to:
+
+./mvnw spring-boot:run -Dspring-boot.run.arguments="job-watcher --dry-run"
+
+or, if the repo has a better existing command pattern, follow that pattern.
+
+Possible later Docker command shape:
+
+docker compose run --rm job-watcher --dry-run
+
+Scheduling guidance:
+
+* First support manual dry-run.
+* Then support manual live run.
+* Then document local cron/systemd scheduling.
+* Then optionally add a Docker Compose worker service.
+* Do not require the main web app to be open in a browser.
+* The worker may either run as a command and exit, or run inside the Spring app as a scheduled job, but command-and-exit is preferred for MVP clarity.
+
+Suggested cron cadence:
+
 17 */6 * * *
 
 Reason:
-Use an offset minute instead of exactly the top of the hour.
+Run about every 6 hours, offset from the top of the hour.
 
-Scheduled runner behavior:
-
-* Run every 6 hours.
-* Check configured sources.
-* Match relevant jobs.
-* Send Discord webhook notifications for new matches only.
-* Do not resend alerts for jobs already alerted.
-* Log a summary in the workflow output.
-* Support dry-run mode that prints the Discord payload without sending.
+Important:
+If using host cron, document that the local machine or server must be on for the watcher to run.
+This is acceptable for MVP because Postgres-backed state keeps the architecture clean and portable.
 
 Phase 7: MVP implementation scope
 
@@ -542,8 +625,11 @@ Define a small first implementation that can be completed safely later today.
 MVP target:
 
 * Add job watcher plan doc.
+* Add local-first runtime decision.
+* Add Postgres-backed state/idempotency plan.
 * Add adapter interface.
 * Add normalized job type.
+* Add database migration plan or migration scaffolding for watched sources, job postings, match rules, and alerts.
 * Implement CapitalOneCareersAdapter first if source inspection shows stable fetch-based parsing.
 * Implement MoodysCareersAdapter second if time allows.
 * Add ClerkCareersAdapter or ClerkAshbyAdapter scaffold.
@@ -551,8 +637,8 @@ MVP target:
 * Add deterministic matching function.
 * Add Discord webhook payload formatter.
 * Add dry-run CLI command that prints matching jobs and Discord payloads.
-* Add tests for normalization, fingerprinting, matching, and Discord payload formatting.
-* Add GitHub Actions scheduled workflow only after dry-run works locally.
+* Add tests for normalization, fingerprinting, matching, idempotency, and Discord payload formatting.
+* Do not add GitHub Actions scheduled workflow for MVP.
 
 Suggested dry-run command behavior:
 
@@ -564,6 +650,47 @@ Suggested dry-run command behavior:
 * Do not send notifications.
 * Do not mutate persisted state unless explicitly configured.
 
+Suggested live command behavior:
+
+* Run all configured sources.
+* Upsert source check status.
+* Upsert found job postings.
+* Mark matching jobs.
+* Create JobAlert records for new matches.
+* Send Discord notifications only when explicitly enabled.
+* Do not resend alerts for jobs with an existing SENT JobAlert.
+
+Phase 8: Future deployment options
+
+Status: Not started
+
+Keep the worker portable so the runtime can move later without rewriting core logic.
+
+Future runtime options:
+
+1. Home server / always-on local machine
+
+* Run Postgres and worker locally.
+* Schedule with cron, systemd, or Docker Compose.
+* Good fit if the user already maintains local infrastructure.
+
+2. VPS
+
+* Run the CRM database and worker on a low-cost VPS.
+* Good fit if always-on reliability becomes important.
+
+3. Cloud/serverless
+
+* Possible later, but not MVP.
+* Would need a durable state store such as hosted Postgres.
+* Avoid using GitHub Actions as a database.
+
+4. GitHub Actions
+
+* Future option only.
+* If used later, it should connect to a real hosted database.
+* It should not use committed JSON state, cache, or artifacts for core idempotency.
+
 3. Add implementation notes
 
 Engineering constraints:
@@ -572,10 +699,13 @@ Engineering constraints:
 * Do not overbuild a crawler.
 * Do not start with Playwright.
 * Do not start with OpenClaw or an AI agent.
+* Do not use GitHub Actions as the MVP runtime.
+* Do not use GitHub Actions cache, artifacts, or committed JSON state files as the source of truth.
 * Keep adapters isolated so one company change does not break the whole watcher.
 * Prefer stable APIs, embedded JSON, and server-rendered HTML before dynamic scraping.
 * The watcher must be idempotent.
 * The same job should not alert repeatedly.
+* Persist idempotency state in Postgres.
 * If a job changes, update lastSeenAt/contentHash without resending unless configured.
 * Store raw HTML samples or sanitized fixtures for tests where appropriate.
 * Add source-specific tests so adapter changes are obvious.
@@ -594,8 +724,12 @@ Documentation:
 * [ ] Reference job watcher plan from docs/plan.md
 * [ ] Document the four initial watched companies and seed URLs
 * [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
+* [ ] Document local-first worker runtime decision
+* [ ] Document Postgres-backed state/idempotency decision
 * [ ] Document Discord webhook notification design
-* [ ] Document how to create and configure the DISCORD_WEBHOOK_URL secret
+* [ ] Document how to configure DISCORD_WEBHOOK_URL locally
+* [ ] Document how to run the watcher manually in dry-run mode
+* [ ] Document future scheduling options: cron, systemd, Docker Compose
 
 Source research:
 
@@ -605,10 +739,19 @@ Source research:
 * [ ] Inspect Moody's source structure
 * [ ] Document extraction strategy for each source
 
+Data model:
+
+* [ ] Add or plan migration for watched job sources
+* [ ] Add or plan migration for job postings
+* [ ] Add or plan migration for job match rules
+* [ ] Add or plan migration for job alerts
+* [ ] Add stableKey uniqueness strategy
+* [ ] Add source status fields for lastCheckedAt, lastSuccessfulCheckAt, and lastError
+
 Core types:
 
 * [ ] Add normalized job type
-* [ ] Add watched source config type/entity plan
+* [ ] Add watched source config type/entity
 * [ ] Add job source adapter interface
 * [ ] Add match result type
 * [ ] Add Discord notification payload type if useful
@@ -629,10 +772,12 @@ Matching:
 * [ ] Add USA/remote-USA location matching
 * [ ] Add explanation output for matches and exclusions
 
-Fingerprinting:
+Fingerprinting and idempotency:
 
+* [ ] Add stable job key function
 * [ ] Add fingerprint/content hash function
 * [ ] Ensure same job does not alert repeatedly
+* [ ] Check JobAlert before sending Discord notification
 * [ ] Decide whether changed content should trigger a new alert or only update contentHash
 
 Runner:
@@ -642,15 +787,19 @@ Runner:
 * [ ] Print matched jobs
 * [ ] Print source errors without failing the entire run
 * [ ] Print Discord payload in dry-run mode
+* [ ] Add live run mode that writes to Postgres
+* [ ] Ensure live mode does not send Discord unless explicitly enabled
 
 Notifications:
 
 * [ ] Add Discord webhook notification sender
 * [ ] Read DISCORD_WEBHOOK_URL from environment
+* [ ] Add JOB_WATCHER_SEND_DISCORD or equivalent explicit enable flag
 * [ ] Add dry-run mode that prints Discord payload without sending
 * [ ] Add test for Discord payload formatting
 * [ ] Add safe error handling for failed Discord sends
 * [ ] Ensure failed Discord sends are logged without crashing the entire watcher run
+* [ ] Persist Discord send outcome in JobAlert
 
 Tests:
 
@@ -658,15 +807,17 @@ Tests:
 * [ ] Add tests for seniority exclusions
 * [ ] Add tests for USA/remote matching
 * [ ] Add tests for source normalization
+* [ ] Add tests for stable job key generation
 * [ ] Add tests for fingerprinting/idempotency
 * [ ] Add tests for Discord payload formatting
 
 Scheduling:
 
-* [ ] Add GitHub Actions schedule plan
-* [ ] Use cron cadence around every 6 hours
-* [ ] Use DISCORD_WEBHOOK_URL from GitHub Actions secrets
-* [ ] Only enable scheduled workflow after dry-run works
+* [ ] Do not add GitHub Actions schedule for MVP
+* [ ] Add docs for local cron scheduling
+* [ ] Add docs for systemd timer scheduling if useful
+* [ ] Add Docker Compose worker service only if it fits the repo cleanly
+* [ ] Use cadence around every 6 hours
 
 Future:
 
@@ -676,6 +827,7 @@ Future:
 * [ ] Add UI for alert history
 * [ ] Add Playwright fallback only if a high-priority source cannot be parsed with fetch
 * [ ] Add AI summarization later only after deterministic ingestion and matching work
+* [ ] Consider hosted deployment only after local worker proves useful
 
 5. Do not build too much
 
@@ -685,6 +837,8 @@ If implementation is safe:
 * Prefer one working adapter over four half-working adapters.
 * Prefer dry-run output over notification delivery.
 * Prefer deterministic matching over AI summarization.
+* Prefer Postgres-backed idempotency over clever external state.
+* Prefer local manual execution before local scheduling.
 * Prefer Discord webhook formatting before actual sending.
 
 If repo state is uncertain:
@@ -704,8 +858,14 @@ A committed-ready plan document and, if safe, minimal scaffolding for the job wa
 
 The plan should preserve the user's provided filtered seed URLs while allowing adapters to discover better canonical data sources during implementation.
 
-The MVP notification path should be:
+The MVP runtime path should be:
 
-1. Console dry-run output first.
-2. Discord webhook payload preview second.
-3. Real Discord webhook sending only after matching and idempotency are working.
+1. Manual dry-run command first.
+2. Postgres-backed state and idempotency second.
+3. Discord webhook payload preview third.
+4. Manual live run with Discord disabled by default.
+5. Real Discord webhook sending only after matching and idempotency are working.
+6. Local scheduled worker every 6 hours once manual runs are reliable.
+
+Do not use GitHub Actions as the MVP runtime.
+Do not use GitHub Actions artifacts, cache, or committed JSON state as the source of truth.
