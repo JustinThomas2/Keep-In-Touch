@@ -418,7 +418,9 @@ Watcher runner responsibilities:
 
 Phase 4: Matching
 
-Status: Not started
+Status: Complete
+
+Matching design is documented in `docs/job-watcher-matching-design.md`.
 
 Create deterministic matching logic focused on relevant SWE roles in the USA.
 
@@ -772,11 +774,11 @@ Adapters:
 
 Matching:
 
-* [ ] Add matching function
-* [ ] Add default include keywords
-* [ ] Add default exclude keywords
-* [ ] Add USA/remote-USA location matching
-* [ ] Add explanation output for matches and exclusions
+* [x] Plan matching function
+* [x] Plan default include keywords
+* [x] Plan default exclude keywords
+* [x] Plan USA/remote-USA location matching
+* [x] Plan explanation output for matches and exclusions
 
 Fingerprinting and idempotency:
 
