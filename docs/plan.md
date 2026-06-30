@@ -360,7 +360,9 @@ Idempotency rules:
 
 Phase 3: Adapter design
 
-Status: Not started
+Status: Complete
+
+Adapter design is documented in `docs/job-watcher-adapter-design.md`.
 
 Create an adapter-based ingestion design.
 
@@ -754,19 +756,19 @@ Data model:
 
 Core types:
 
-* [ ] Add normalized job type
+* [x] Plan normalized job type
 * [x] Plan watched source config type/entity
-* [ ] Add job source adapter interface
+* [x] Plan job source adapter interface
 * [ ] Add match result type
 * [ ] Add Discord notification payload type if useful
 
 Adapters:
 
-* [ ] Add CapitalOneCareersAdapter
-* [ ] Add MoodysCareersAdapter
-* [ ] Add ClerkCareersAdapter or ClerkAshbyAdapter scaffold
-* [ ] Add VanguardCareersAdapter scaffold
-* [ ] Add ManualFixtureAdapter for tests
+* [x] Plan CapitalOneCareersAdapter
+* [x] Plan MoodysCareersAdapter
+* [x] Plan ClerkCareersAdapter or ClerkAshbyAdapter scaffold
+* [x] Plan VanguardCareersAdapter scaffold
+* [x] Plan ManualFixtureAdapter for tests
 
 Matching:
 
@@ -778,8 +780,8 @@ Matching:
 
 Fingerprinting and idempotency:
 
-* [ ] Add stable job key function
-* [ ] Add fingerprint/content hash function
+* [x] Plan stable job key function
+* [x] Plan fingerprint/content hash function
 * [ ] Ensure same job does not alert repeatedly
 * [ ] Check JobAlert before sending Discord notification
 * [ ] Decide whether changed content should trigger a new alert or only update contentHash
