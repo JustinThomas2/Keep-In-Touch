@@ -630,7 +630,12 @@ This is acceptable for MVP because Postgres-backed state keeps the architecture 
 
 Phase 7: MVP implementation scope
 
-Status: Not started
+Status: Complete
+
+MVP implementation scope is documented in `docs/job-watcher-mvp-scope.md`.
+
+Slice 1 persistence foundation status: Implemented. Added the Flyway migration, JPA entities,
+repositories, and focused persistence tests for the job watcher tables.
 
 Define a small first implementation that can be completed safely later today.
 
@@ -734,8 +739,8 @@ Documentation:
 
 * [x] Add docs/job-watcher-research.md
 * [x] Reference job watcher research from docs/plan.md
-* [ ] Document the four initial watched companies and seed URLs
-* [ ] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
+* [x] Document the four initial watched companies and seed URLs
+* [x] Document that seed URLs preserve the user's current manual filters but may not be canonical implementation URLs
 * [x] Document local-first worker runtime decision
 * [x] Document Postgres-backed state/idempotency decision
 * [x] Document Discord webhook notification design
@@ -745,11 +750,11 @@ Documentation:
 
 Source research:
 
-* [ ] Inspect Capital One source structure
-* [ ] Inspect Clerk source structure and ATS link
-* [ ] Inspect Vanguard source structure
-* [ ] Inspect Moody's source structure
-* [ ] Document extraction strategy for each source
+* [x] Inspect Capital One source structure
+* [x] Inspect Clerk source structure and ATS link
+* [x] Inspect Vanguard source structure
+* [x] Inspect Moody's source structure
+* [x] Document extraction strategy for each source
 
 Data model:
 
@@ -765,8 +770,8 @@ Core types:
 * [x] Plan normalized job type
 * [x] Plan watched source config type/entity
 * [x] Plan job source adapter interface
-* [ ] Add match result type
-* [ ] Add Discord notification payload type if useful
+* [x] Plan match result type
+* [x] Plan Discord notification payload type if useful
 
 Adapters:
 
@@ -788,9 +793,9 @@ Fingerprinting and idempotency:
 
 * [x] Plan stable job key function
 * [x] Plan fingerprint/content hash function
-* [ ] Ensure same job does not alert repeatedly
-* [ ] Check JobAlert before sending Discord notification
-* [ ] Decide whether changed content should trigger a new alert or only update contentHash
+* [x] Plan same job not alerting repeatedly
+* [x] Plan JobAlert check before sending Discord notification
+* [x] Decide changed content should only update contentHash by default
 
 Runner:
 
@@ -825,11 +830,11 @@ Tests:
 
 Scheduling:
 
-* [ ] Do not add GitHub Actions schedule for MVP
-* [ ] Add docs for local cron scheduling
-* [ ] Add docs for systemd timer scheduling if useful
+* [x] Do not add GitHub Actions schedule for MVP
+* [x] Add docs for local cron scheduling
+* [x] Add docs for systemd timer scheduling if useful
 * [ ] Add Docker Compose worker service only if it fits the repo cleanly
-* [ ] Use cadence around every 6 hours
+* [x] Use cadence around every 6 hours
 
 Future:
 
