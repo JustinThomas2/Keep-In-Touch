@@ -25,6 +25,53 @@ class DeterministicJobMatcherTests {
   }
 
   @Test
+  void treatsRecognizableUsCountryStringsAsUsMatches() {
+    List<String> countries =
+        List.of("US", "USA", "U.S.", "U.S.A.", "United States", "United States of America");
+
+    for (String country : countries) {
+      MatchResult result =
+          DeterministicJobMatcher.match(
+              job("Software Engineer", "New York", country, "Product Engineering"),
+              defaultCriteria());
+
+      assertThat(result.matched()).as(country).isTrue();
+      assertThat(result.locationMatches()).as(country).contains("US");
+    }
+  }
+
+  @Test
+  void treatsRemoteUsLocationStringsAsUsMatches() {
+    List<String> locations = List.of("Remote - US", "Remote - United States");
+
+    for (String location : locations) {
+      MatchResult result =
+          DeterministicJobMatcher.match(
+              job("Software Engineer", location, null, "Product Engineering"), defaultCriteria());
+
+      assertThat(result.matched()).as(location).isTrue();
+      assertThat(result.locationMatches()).as(location).contains("US", "remote-us");
+      assertThat(result.reasons()).as(location).isEmpty();
+    }
+  }
+
+  @Test
+  void treatsCityStateLocationsWithUsStateAbbreviationsAsUsMatches() {
+    List<String> locations =
+        List.of("McLean, VA", "New York, NY", "Atlanta, GA", "San Francisco, CA");
+
+    for (String location : locations) {
+      MatchResult result =
+          DeterministicJobMatcher.match(
+              job("Software Engineer", location, null, "Product Engineering"), defaultCriteria());
+
+      assertThat(result.matched()).as(location).isTrue();
+      assertThat(result.locationMatches()).as(location).contains("US");
+      assertThat(result.reasons()).as(location).isEmpty();
+    }
+  }
+
+  @Test
   void rejectsRoleWithoutIncludeKeyword() {
     MatchResult result =
         DeterministicJobMatcher.match(

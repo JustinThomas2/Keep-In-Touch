@@ -88,12 +88,13 @@ public final class DeterministicJobMatcher {
     List<String> matches = new ArrayList<>();
     String country = normalize(job.country());
     String location = normalize(job.location());
+    CountryLocationClassifier.Classification classification =
+        CountryLocationClassifier.classify(job.country(), job.location());
 
     for (String includeCountry : criteria.includeCountries()) {
       String normalizedCountry = normalizeCountry(includeCountry);
       if (!normalizedCountry.isEmpty()
-          && (country.equals(normalizedCountry)
-              || locationContainsCountry(location, normalizedCountry))) {
+          && countryMatches(normalizedCountry, country, location, classification)) {
         matches.add(includeCountry);
       }
     }
@@ -105,8 +106,8 @@ public final class DeterministicJobMatcher {
     }
 
     if (criteria.remotePreference() == RemotePreference.REMOTE_US_ALLOWED
-        && isRemote(location)
-        && (locationContainsCountry(location, "us") || location.contains("united states"))) {
+        && classification.remote()
+        && classification.usBased()) {
       matches.add("remote-us");
     }
     return List.copyOf(matches);
@@ -116,12 +117,21 @@ public final class DeterministicJobMatcher {
     if (criteria.remotePreference() != RemotePreference.REMOTE_US_ALLOWED) {
       return false;
     }
-    String location = normalize(job.location()).trim();
-    if (!location.equals("remote")) {
-      return false;
-    }
+    CountryLocationClassifier.Classification classification =
+        CountryLocationClassifier.classify(job.country(), job.location());
     String country = normalizeCountry(job.country());
-    return country.isEmpty() || country.equals("unknown");
+    return classification.ambiguousRemote() && (country.isEmpty() || country.equals("unknown"));
+  }
+
+  private static boolean countryMatches(
+      String expectedCountry,
+      String country,
+      String location,
+      CountryLocationClassifier.Classification classification) {
+    if (expectedCountry.equals("us") && classification.usBased()) {
+      return true;
+    }
+    return country.equals(expectedCountry) || locationContainsCountry(location, expectedCountry);
   }
 
   private static boolean locationContainsCountry(String location, String country) {
@@ -149,7 +159,11 @@ public final class DeterministicJobMatcher {
 
   private static String normalizeCountry(String value) {
     String normalized = normalize(value).trim();
-    if (normalized.equals("usa") || normalized.equals("united states")) {
+    if (normalized.equals("usa")
+        || normalized.equals("u.s.")
+        || normalized.equals("u.s.a.")
+        || normalized.equals("united states")
+        || normalized.equals("united states of america")) {
       return "us";
     }
     return normalized;
