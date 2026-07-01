@@ -28,7 +28,7 @@ class CapitalOneCareersAdapterTests {
     assertThat(result.jobs().getFirst().externalId()).isEqualTo("R12345");
     assertThat(result.jobs().getFirst().title()).isEqualTo("Senior Software Engineer, Front End");
     assertThat(result.jobs().getFirst().location()).isEqualTo("McLean, VA");
-    assertThat(result.jobs().getFirst().country()).isNull();
+    assertThat(result.jobs().getFirst().country()).isEqualTo("US");
     assertThat(result.jobs().getFirst().url())
         .isEqualTo(
             "https://www.capitalonecareers.com/job/mclean/senior-software-engineer/234/12345");
@@ -67,6 +67,30 @@ class CapitalOneCareersAdapterTests {
     assertThat(result.jobs()).hasSize(1);
     assertThat(result.jobs().getFirst().externalId()).isEqualTo("99999");
     assertThat(result.jobs().getFirst().title()).isEqualTo("Software Engineer");
+    assertThat(result.jobs().getFirst().country()).isEqualTo("US");
+  }
+
+  @Test
+  void returnsNullPostedAtForYearlessPostedDates() {
+    CapitalOneCareersAdapter adapter =
+        new CapitalOneCareersAdapter(url -> ok(jobWithPostedDate("Jun 15")));
+
+    JobSourceSuccess result = (JobSourceSuccess) adapter.fetchAndParse(source());
+
+    assertThat(result.jobs()).hasSize(1);
+    assertThat(result.jobs().getFirst().postedAt()).isNull();
+  }
+
+  @Test
+  void parsesTextPostedDatesWhenYearIsPresent() {
+    CapitalOneCareersAdapter adapter =
+        new CapitalOneCareersAdapter(url -> ok(jobWithPostedDate("Jun 15, 2026")));
+
+    JobSourceSuccess result = (JobSourceSuccess) adapter.fetchAndParse(source());
+
+    assertThat(result.jobs()).hasSize(1);
+    assertThat(result.jobs().getFirst().postedAt())
+        .isEqualTo(OffsetDateTime.parse("2026-06-15T00:00:00Z"));
   }
 
   @Test
@@ -212,5 +236,20 @@ class CapitalOneCareersAdapterTests {
           </body>
         </html>
         """;
+  }
+
+  private static String jobWithPostedDate(String postedDate) {
+    return """
+        <html>
+          <body>
+            <li data-job-id="R12345">
+              <a href="/job/mclean/software-engineer/234/12345">Software Engineer</a>
+              <span class="job-location">McLean, VA</span>
+              <span class="job-date-posted">%s</span>
+            </li>
+          </body>
+        </html>
+        """
+        .formatted(postedDate);
   }
 }

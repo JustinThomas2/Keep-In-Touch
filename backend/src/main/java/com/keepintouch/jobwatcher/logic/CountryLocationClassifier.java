@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-final class CountryLocationClassifier {
+public final class CountryLocationClassifier {
 
   private static final Set<String> US_COUNTRY_STRINGS =
       Set.of("us", "usa", "united states", "united states of america");
@@ -18,6 +18,10 @@ final class CountryLocationClassifier {
       Pattern.compile(".*,\\s*([A-Za-z]{2})(?:\\s|$).*");
 
   private CountryLocationClassifier() {}
+
+  public static boolean isUsBased(String country, String location) {
+    return classify(country, location).usBased();
+  }
 
   static Classification classify(String country, String location) {
     boolean countryIsUs = isUsCountry(country);

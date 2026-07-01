@@ -1,6 +1,7 @@
 package com.keepintouch.jobwatcher.adapter;
 
 import com.keepintouch.domain.JobSourceType;
+import com.keepintouch.jobwatcher.logic.CountryLocationClassifier;
 import com.keepintouch.jobwatcher.model.JobSourceFailure;
 import com.keepintouch.jobwatcher.model.JobSourceResult;
 import com.keepintouch.jobwatcher.model.JobSourceSuccess;
@@ -17,9 +18,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -47,19 +46,11 @@ public class CapitalOneCareersAdapter implements JobSourceAdapter {
   private static final Pattern POSTED_DATE_PATTERN =
       Pattern.compile(
           "(?is)<[^>]*class\\s*=\\s*['\"][^'\"]*job-date-posted[^'\"]*['\"][^>]*>(.*?)</[^>]+>");
-  private static final DateTimeFormatter POSTED_DATE_FORMATTER =
-      new DateTimeFormatterBuilder()
-          .parseCaseInsensitive()
-          .appendPattern("MMM d")
-          .optionalStart()
-          .appendLiteral(',')
-          .optionalEnd()
-          .optionalStart()
-          .appendLiteral(' ')
-          .appendValue(ChronoField.YEAR)
-          .optionalEnd()
-          .parseDefaulting(ChronoField.YEAR, 1970)
-          .toFormatter(Locale.US);
+  private static final Pattern FOUR_DIGIT_YEAR_PATTERN = Pattern.compile("\\b\\d{4}\\b");
+  private static final List<DateTimeFormatter> POSTED_DATE_FORMATTERS =
+      List.of(
+          DateTimeFormatter.ofPattern("MMM d, uuuu", Locale.US),
+          DateTimeFormatter.ofPattern("MMM d uuuu", Locale.US));
 
   private final PageFetcher pageFetcher;
 
@@ -153,7 +144,7 @@ public class CapitalOneCareersAdapter implements JobSourceAdapter {
             externalId,
             title,
             location,
-            inferCountry(location),
+            CountryLocationClassifier.isUsBased(null, location) ? "US" : null,
             url,
             url,
             null,
@@ -209,25 +200,17 @@ public class CapitalOneCareersAdapter implements JobSourceAdapter {
       } catch (DateTimeParseException ignored) {
       }
     }
-    try {
-      LocalDate date = LocalDate.parse(normalized, POSTED_DATE_FORMATTER);
-      return Optional.of(date.atStartOfDay().atOffset(ZoneOffset.UTC));
-    } catch (DateTimeParseException ignored) {
+    if (!FOUR_DIGIT_YEAR_PATTERN.matcher(normalized).find()) {
       return Optional.empty();
     }
-  }
-
-  private static String inferCountry(String location) {
-    if (location == null || location.isBlank()) {
-      return null;
+    for (DateTimeFormatter formatter : POSTED_DATE_FORMATTERS) {
+      try {
+        LocalDate date = LocalDate.parse(normalized, formatter);
+        return Optional.of(date.atStartOfDay().atOffset(ZoneOffset.UTC));
+      } catch (DateTimeParseException ignored) {
+      }
     }
-    String normalized = location.toLowerCase(Locale.ROOT);
-    if (normalized.contains("united states")
-        || normalized.contains(" usa ")
-        || normalized.contains(", us")) {
-      return "US";
-    }
-    return null;
+    return Optional.empty();
   }
 
   private static String resolveUrl(String pageUrl, String href) {
