@@ -637,6 +637,11 @@ MVP implementation scope is documented in `docs/job-watcher-mvp-scope.md`.
 Slice 1 persistence foundation status: Implemented. Added the Flyway migration, JPA entities,
 repositories, and focused persistence tests for the job watcher tables.
 
+Slice 2 core types and pure logic status: Implemented. Added immutable Java records for watched
+source config, normalized jobs, match results, and Discord webhook payloads, plus pure utilities and
+unit tests for stable key generation, content hashing, deterministic matching, and Discord payload
+formatting.
+
 Define a small first implementation that can be completed safely later today.
 
 MVP target:
