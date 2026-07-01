@@ -9,5 +9,7 @@ public interface JobMatchRuleRepository extends JpaRepository<JobMatchRule, UUID
 
   List<JobMatchRule> findByUserIdAndEnabledTrueOrderByCreatedAtAsc(UUID userId);
 
+  List<JobMatchRule> findByUserIdAndCompanyIdIsNullAndEnabledTrueOrderByCreatedAtAsc(UUID userId);
+
   List<JobMatchRule> findByCompanyIdAndEnabledTrueOrderByCreatedAtAsc(UUID companyId);
 }

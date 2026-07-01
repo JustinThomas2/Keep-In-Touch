@@ -642,6 +642,13 @@ source config, normalized jobs, match results, and Discord webhook payloads, plu
 unit tests for stable key generation, content hashing, deterministic matching, and Discord payload
 formatting.
 
+Slice 3 dry-run runner with fixtures status: Implemented. Added a command-and-exit dry-run path,
+manual fixture adapter, adapter result types, dry-run runner output, source/rule config loading, and
+focused unit tests for fixture success, zero-result/failure behavior, source failure isolation,
+command detection, rule fallback behavior, and Discord payload previews without sends or database
+writes. Fixture/demo dry-runs use default criteria when no watched sources exist; real watched
+sources require active database match rules and are skipped clearly when rules are missing.
+
 Define a small first implementation that can be completed safely later today.
 
 MVP target:

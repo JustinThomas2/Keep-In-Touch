@@ -7,10 +7,21 @@ import java.util.UUID;
 public record WatchedSourceConfig(
     UUID sourceId,
     UUID companyId,
+    UUID userId,
     String companyName,
     JobSourceType sourceType,
     String originalSourceUrl,
     String canonicalSourceUrl) {
+
+  public WatchedSourceConfig(
+      UUID sourceId,
+      UUID companyId,
+      String companyName,
+      JobSourceType sourceType,
+      String originalSourceUrl,
+      String canonicalSourceUrl) {
+    this(sourceId, companyId, null, companyName, sourceType, originalSourceUrl, canonicalSourceUrl);
+  }
 
   public WatchedSourceConfig {
     Objects.requireNonNull(sourceId, "sourceId must not be null");
