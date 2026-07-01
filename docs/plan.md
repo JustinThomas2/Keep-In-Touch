@@ -649,6 +649,11 @@ command detection, rule fallback behavior, and Discord payload previews without 
 writes. Fixture/demo dry-runs use default criteria when no watched sources exist; real watched
 sources require active database match rules and are skipped clearly when rules are missing.
 
+Slice 4 first real adapter status: Implemented. Added `CapitalOneCareersAdapter` using direct HTTP
+fetches against the configured Capital One careers source, server-rendered result-card parsing,
+pagination through `Next` links, normalized job output, source-scoped failure results, and focused
+fixture-style unit tests without live network calls.
+
 Define a small first implementation that can be completed safely later today.
 
 MVP target:
